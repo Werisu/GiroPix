@@ -78,7 +78,7 @@ class DashboardScreen extends StatelessWidget {
                             ),
                           ),
                           IconButton(
-                            tooltip: 'Backup',
+                            tooltip: 'Configurações',
                             onPressed: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute<void>(

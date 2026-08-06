@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/developer_card.dart';
 import '../../data/services/backup_service.dart';
 import '../../providers/finance_provider.dart';
 
@@ -251,7 +252,7 @@ class _BackupScreenState extends State<BackupScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Backup'),
+        title: const Text('Configurações'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: _busy ? null : () => Navigator.pop(context),
@@ -306,6 +307,15 @@ class _BackupScreenState extends State<BackupScreen> {
                 ),
               ),
               const SizedBox(height: 20),
+              const Text(
+                'Backup',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
               Text(
                 'Agora: ${finance.corridas.length} corridas · '
                 '${finance.gastos.length} gastos',
@@ -330,6 +340,8 @@ class _BackupScreenState extends State<BackupScreen> {
                 accent: AppColors.neonBlue,
                 onTap: _busy ? null : _importar,
               ),
+              const SizedBox(height: 28),
+              const DeveloperCard(),
             ],
           ),
           if (_busy)
