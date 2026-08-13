@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/app_feedback.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/datetime_field.dart';
 import '../../../data/models/gasto.dart';
@@ -96,6 +97,8 @@ class _GastoFormState extends State<GastoForm> {
           data: _dataHora,
         );
       }
+
+      await AppFeedback.lancamentoSalvo();
 
       if (!mounted) return;
       if (_editing) {
