@@ -60,6 +60,18 @@ List<DateTime> ultimosDias(int dias, {DateTime? ref}) {
 
 DateTime inicioDoDia(DateTime d) => DateTime(d.year, d.month, d.day);
 
+DateTime inicioDoMes(DateTime d) => DateTime(d.year, d.month, 1);
+
+/// Intervalo [inicio, fim) do mês civil de [mes].
+({DateTime inicio, DateTime fim}) intervaloMes(DateTime mes) {
+  final inicio = inicioDoMes(mes);
+  return (inicio: inicio, fim: DateTime(mes.year, mes.month + 1, 1));
+}
+
+/// Quantos dias vazios antes do dia 1 em uma grade que começa no domingo.
+int offsetCalendarioDomingo(DateTime primeiroDiaDoMes) =>
+    primeiroDiaDoMes.weekday % 7;
+
 /// Dias em [inicio, fim), do mais antigo ao mais recente.
 List<DateTime> diasNoIntervalo(DateTime inicio, DateTime fim) {
   final start = inicioDoDia(inicio);

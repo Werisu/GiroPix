@@ -9,6 +9,7 @@ import '../backup/backup_screen.dart';
 import 'widgets/earnings_chart.dart';
 import 'widgets/period_filter.dart';
 import 'widgets/summary_cards.dart';
+import 'widgets/worked_days_calendar.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -112,6 +113,8 @@ class DashboardScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       SummaryCards(resumo: resumo),
+                      const SizedBox(height: 20),
+                      const WorkedDaysCalendar(),
                       const SizedBox(height: 20),
                       EarningsChart(data: chartData, periodo: finance.periodo),
                       const SizedBox(height: 24),

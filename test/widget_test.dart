@@ -89,6 +89,19 @@ void main() {
     expect(restored.plataforma, 'Outro');
   });
 
+  test('intervaloMes cobre o mês civil inteiro', () {
+    final intervalo = intervaloMes(DateTime(2026, 8, 13, 18));
+    expect(intervalo.inicio, DateTime(2026, 8, 1));
+    expect(intervalo.fim, DateTime(2026, 9, 1));
+  });
+
+  test('offsetCalendarioDomingo alinha o dia 1 na grade', () {
+    // 1º ago 2026 foi sábado (weekday=6) → 6 células vazias antes.
+    expect(offsetCalendarioDomingo(DateTime(2026, 8, 1)), 6);
+    // 1º mar 2026 foi domingo (weekday=7) → sem offset.
+    expect(offsetCalendarioDomingo(DateTime(2026, 3, 1)), 0);
+  });
+
   test('diasNoIntervalo lista dias em [inicio, fim)', () {
     final dias = diasNoIntervalo(DateTime(2026, 8, 1), DateTime(2026, 8, 4));
     expect(dias, [

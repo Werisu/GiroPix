@@ -170,13 +170,16 @@ class FinanceProvider extends ChangeNotifier {
   ResumoFinanceiro resumoDoPeriodo([PeriodoFiltro? periodo]) {
     final p = periodo ?? _periodo;
     final intervalo = intervaloPeriodo(p);
+    return resumoNoIntervalo(intervalo.inicio, intervalo.fim);
+  }
 
+  ResumoFinanceiro resumoNoIntervalo(DateTime inicio, DateTime fim) {
     final corridasPeriodo = _corridas.where(
-      (c) => estaNoIntervalo(c.dataHora, intervalo.inicio, intervalo.fim),
+      (c) => estaNoIntervalo(c.dataHora, inicio, fim),
     );
 
     final gastosPeriodo = _gastos.where(
-      (g) => estaNoIntervalo(g.data, intervalo.inicio, intervalo.fim),
+      (g) => estaNoIntervalo(g.data, inicio, fim),
     );
 
     double bruto = 0;
@@ -203,6 +206,41 @@ class FinanceProvider extends ChangeNotifier {
       totalGastos: totalGastos,
       quantidadeCorridas: qtd,
     );
+  }
+
+  ResumoFinanceiro resumoDoDia(DateTime dia) {
+    final inicio = inicioDoDia(dia);
+    return resumoNoIntervalo(inicio, inicio.add(const Duration(days: 1)));
+  }
+
+  /// Dias do mês com pelo menos uma corrida (dia trabalhado).
+  Set<DateTime> diasTrabalhadosNoMes(DateTime mes) {
+    final intervalo = intervaloMes(mes);
+    final dias = <DateTime>{};
+    for (final c in _corridas) {
+      if (estaNoIntervalo(c.dataHora, intervalo.inicio, intervalo.fim)) {
+        dias.add(inicioDoDia(c.dataHora));
+      }
+    }
+    return dias;
+  }
+
+  List<Corrida> corridasDoDia(DateTime dia) {
+    final inicio = inicioDoDia(dia);
+    final fim = inicio.add(const Duration(days: 1));
+    return _corridas
+        .where((c) => estaNoIntervalo(c.dataHora, inicio, fim))
+        .toList()
+      ..sort((a, b) => a.dataHora.compareTo(b.dataHora));
+  }
+
+  List<Gasto> gastosDoDia(DateTime dia) {
+    final inicio = inicioDoDia(dia);
+    final fim = inicio.add(const Duration(days: 1));
+    return _gastos
+        .where((g) => estaNoIntervalo(g.data, inicio, fim))
+        .toList()
+      ..sort((a, b) => a.data.compareTo(b.data));
   }
 
   /// Ganhos líquidos no período filtrado (índice 0 = mais antigo).
