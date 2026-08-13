@@ -9,7 +9,10 @@ class HiveService {
   static const String settingsBox = 'settings';
 
   static const String keyTaxaPadraoPercent = 'taxa_padrao_percent';
+  static const String keyPlataformaPadrao = 'plataforma_padrao';
+  static const String keyGuestMode = 'guest_mode';
   static const double taxaPadraoDefault = 15.0;
+  static const String plataformaPadraoDefault = '99';
 
   static Future<void> init() async {
     await Hive.initFlutter();
@@ -39,5 +42,21 @@ class HiveService {
 
   static Future<void> setTaxaPadraoPercent(double percent) async {
     await settings.put(keyTaxaPadraoPercent, percent);
+  }
+
+  static String getPlataformaPadrao() {
+    final value = settings.get(keyPlataformaPadrao) as String?;
+    if (value == null || value.isEmpty) return plataformaPadraoDefault;
+    return value;
+  }
+
+  static Future<void> setPlataformaPadrao(String plataforma) async {
+    await settings.put(keyPlataformaPadrao, plataforma);
+  }
+
+  static bool getGuestMode() => settings.get(keyGuestMode) == true;
+
+  static Future<void> setGuestMode(bool enabled) async {
+    await settings.put(keyGuestMode, enabled);
   }
 }

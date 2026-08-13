@@ -20,12 +20,17 @@ class Corrida extends HiveObject {
   @HiveField(4)
   final double taxaApp;
 
+  /// 99 | iFood | Uber | Outro. Corridas antigas sem o campo viram Outro.
+  @HiveField(5)
+  final String plataforma;
+
   Corrida({
     String? id,
     required this.dataHora,
     required this.valorBruto,
     required this.formaPagamento,
     required this.taxaApp,
+    this.plataforma = 'Outro',
   }) : id = id ?? const Uuid().v4();
 
   double get valorLiquido => valorBruto - taxaApp;
@@ -36,6 +41,7 @@ class Corrida extends HiveObject {
     double? valorBruto,
     String? formaPagamento,
     double? taxaApp,
+    String? plataforma,
   }) {
     return Corrida(
       id: id ?? this.id,
@@ -43,16 +49,18 @@ class Corrida extends HiveObject {
       valorBruto: valorBruto ?? this.valorBruto,
       formaPagamento: formaPagamento ?? this.formaPagamento,
       taxaApp: taxaApp ?? this.taxaApp,
+      plataforma: plataforma ?? this.plataforma,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'dataHora': dataHora.toIso8601String(),
-        'valorBruto': valorBruto,
-        'formaPagamento': formaPagamento,
-        'taxaApp': taxaApp,
-      };
+    'id': id,
+    'dataHora': dataHora.toIso8601String(),
+    'valorBruto': valorBruto,
+    'formaPagamento': formaPagamento,
+    'taxaApp': taxaApp,
+    'plataforma': plataforma,
+  };
 
   factory Corrida.fromJson(Map<String, dynamic> json) {
     return Corrida(
@@ -61,6 +69,7 @@ class Corrida extends HiveObject {
       valorBruto: (json['valorBruto'] as num).toDouble(),
       formaPagamento: json['formaPagamento'] as String,
       taxaApp: (json['taxaApp'] as num).toDouble(),
+      plataforma: json['plataforma'] as String? ?? 'Outro',
     );
   }
 }

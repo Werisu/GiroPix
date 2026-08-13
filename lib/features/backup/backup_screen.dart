@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/developer_card.dart';
 import '../../data/services/backup_service.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/finance_provider.dart';
 
 class BackupScreen extends StatefulWidget {
@@ -46,9 +47,9 @@ class _BackupScreenState extends State<BackupScreen> {
       );
     } on BackupException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -124,10 +125,10 @@ class _BackupScreenState extends State<BackupScreen> {
     setState(() => _busy = true);
     try {
       final result = await context.read<FinanceProvider>().importBackup(
-            File(path),
-            mode: mode,
-            applySettings: applySettings,
-          );
+        File(path),
+        mode: mode,
+        applySettings: applySettings,
+      );
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -141,9 +142,9 @@ class _BackupScreenState extends State<BackupScreen> {
       );
     } on BackupException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -186,10 +187,7 @@ class _BackupScreenState extends State<BackupScreen> {
                 const SizedBox(height: 16),
                 const Text(
                   'Como restaurar?',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 8),
                 const Text(
@@ -246,9 +244,49 @@ class _BackupScreenState extends State<BackupScreen> {
     );
   }
 
+  Future<void> _sair() async {
+    if (_busy) return;
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Sair da conta?'),
+        content: const Text(
+          'Você continua no app sem conta. Os lançamentos neste celular '
+          'não serão apagados.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+            child: const Text('Sair'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar != true || !mounted) return;
+    await context.read<AuthProvider>().signOut();
+  }
+
+  Future<void> _entrar() async {
+    if (_busy) return;
+    final auth = context.read<AuthProvider>();
+    auth.clearError();
+    final ok = await auth.signInWithGoogle();
+    if (!mounted || !ok) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Conta conectada.')));
+  }
+
   @override
   Widget build(BuildContext context) {
     final finance = context.watch<FinanceProvider>();
+    final auth = context.watch<AuthProvider>();
 
     return Scaffold(
       appBar: AppBar(
@@ -263,6 +301,24 @@ class _BackupScreenState extends State<BackupScreen> {
           ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
             children: [
+              if (auth.isAuthenticated)
+                _AccountCard(
+                  displayName: auth.displayName,
+                  email: auth.email,
+                  photoUrl: auth.photoUrl,
+                  busy: auth.busy || _busy,
+                  onSignOut: _sair,
+                )
+              else
+                _GuestAccountCard(busy: auth.busy || _busy, onSignIn: _entrar),
+              if (auth.error != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  auth.error!,
+                  style: const TextStyle(color: AppColors.danger, fontSize: 13),
+                ),
+              ],
+              const SizedBox(height: 20),
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -283,7 +339,7 @@ class _BackupScreenState extends State<BackupScreen> {
                         SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'Seus dados ficam só neste celular',
+                            'Seus dados ficam só neste celular por enquanto',
                             style: TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 14,
@@ -295,8 +351,8 @@ class _BackupScreenState extends State<BackupScreen> {
                     SizedBox(height: 10),
                     Text(
                       'Exporte um arquivo JSON e salve fora do app (Drive, '
-                      'WhatsApp, e-mail ou pasta Arquivos). Se desinstalar o '
-                      'app sem backup, os lançamentos são perdidos.',
+                      'WhatsApp, e-mail ou pasta Arquivos). A sincronização '
+                      'automática na nuvem vem na próxima etapa.',
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 13,
@@ -345,14 +401,187 @@ class _BackupScreenState extends State<BackupScreen> {
             ],
           ),
           if (_busy)
-            const ModalBarrier(
-              dismissible: false,
-              color: Color(0x66000000),
-            ),
+            const ModalBarrier(dismissible: false, color: Color(0x66000000)),
           if (_busy)
             const Center(
               child: CircularProgressIndicator(color: AppColors.neonGreen),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GuestAccountCard extends StatelessWidget {
+  const _GuestAccountCard({required this.busy, required this.onSignIn});
+
+  final bool busy;
+  final VoidCallback onSignIn;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Conta',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            'Usando sem conta',
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Os lançamentos ficam neste celular. Entre com Google quando '
+            'quiser preparar a nuvem.',
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: busy ? null : onSignIn,
+              icon: const Icon(Icons.g_mobiledata_rounded, size: 22),
+              label: const Text('Entrar com Google'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.textPrimary,
+                side: const BorderSide(color: AppColors.border),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AccountCard extends StatelessWidget {
+  const _AccountCard({
+    required this.displayName,
+    required this.email,
+    required this.photoUrl,
+    required this.busy,
+    required this.onSignOut,
+  });
+
+  final String? displayName;
+  final String? email;
+  final String? photoUrl;
+  final bool busy;
+  final VoidCallback onSignOut;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = (displayName != null && displayName!.trim().isNotEmpty)
+        ? displayName!.trim()
+        : 'Conta Google';
+    final mail = email ?? '';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Conta',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: AppColors.surfaceLight,
+                backgroundImage: photoUrl != null
+                    ? NetworkImage(photoUrl!)
+                    : null,
+                child: photoUrl == null
+                    ? Text(
+                        name.isNotEmpty ? name[0].toUpperCase() : '?',
+                        style: const TextStyle(
+                          color: AppColors.neonGreen,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 18,
+                        ),
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
+                    ),
+                    if (mail.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        mail,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: busy ? null : onSignOut,
+              icon: const Icon(Icons.logout_rounded, size: 18),
+              label: const Text('Sair da conta'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.danger,
+                side: BorderSide(
+                  color: AppColors.danger.withValues(alpha: 0.45),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

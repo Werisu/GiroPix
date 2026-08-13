@@ -36,20 +36,11 @@ extension PeriodoFiltroLabel on PeriodoFiltro {
     case PeriodoFiltro.quinzena:
       final dia = hoje.day;
       if (dia <= 15) {
-        return (
-          inicio: DateTime(hoje.year, hoje.month, 1),
-          fim: amanha,
-        );
+        return (inicio: DateTime(hoje.year, hoje.month, 1), fim: amanha);
       }
-      return (
-        inicio: DateTime(hoje.year, hoje.month, 16),
-        fim: amanha,
-      );
+      return (inicio: DateTime(hoje.year, hoje.month, 16), fim: amanha);
     case PeriodoFiltro.mes:
-      return (
-        inicio: DateTime(hoje.year, hoje.month, 1),
-        fim: amanha,
-      );
+      return (inicio: DateTime(hoje.year, hoje.month, 1), fim: amanha);
   }
 }
 
@@ -68,3 +59,29 @@ List<DateTime> ultimosDias(int dias, {DateTime? ref}) {
 }
 
 DateTime inicioDoDia(DateTime d) => DateTime(d.year, d.month, d.day);
+
+/// Dias em [inicio, fim), do mais antigo ao mais recente.
+List<DateTime> diasNoIntervalo(DateTime inicio, DateTime fim) {
+  final start = inicioDoDia(inicio);
+  final end = inicioDoDia(fim);
+  final dias = <DateTime>[];
+  var cursor = start;
+  while (cursor.isBefore(end)) {
+    dias.add(cursor);
+    cursor = cursor.add(const Duration(days: 1));
+  }
+  return dias;
+}
+
+/// Faixas de [horasPorFaixa] horas cobrindo o dia de [dia] (00h–24h).
+List<({DateTime inicio, DateTime fim})> faixasHorariasDoDia(
+  DateTime dia, {
+  int horasPorFaixa = 3,
+}) {
+  final start = inicioDoDia(dia);
+  final qtd = 24 ~/ horasPorFaixa;
+  return List.generate(qtd, (i) {
+    final inicio = start.add(Duration(hours: i * horasPorFaixa));
+    return (inicio: inicio, fim: inicio.add(Duration(hours: horasPorFaixa)));
+  });
+}

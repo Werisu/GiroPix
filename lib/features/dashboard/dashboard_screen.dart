@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/date_helpers.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/finance_provider.dart';
 import '../backup/backup_screen.dart';
 import 'widgets/earnings_chart.dart';
@@ -23,7 +24,7 @@ class DashboardScreen extends StatelessWidget {
         }
 
         final resumo = finance.resumoDoPeriodo();
-        final chartData = finance.ganhosUltimos7Dias();
+        final chartData = finance.ganhosDoPeriodo();
 
         return SafeArea(
           child: CustomScrollView(
@@ -54,11 +55,11 @@ class DashboardScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 12),
-                          const Expanded(
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
+                                const Text(
                                   'GiroPix',
                                   style: TextStyle(
                                     fontSize: 24,
@@ -68,8 +69,10 @@ class DashboardScreen extends StatelessWidget {
                                   ),
                                 ),
                                 Text(
-                                  'Seu controle financeiro na rua',
-                                  style: TextStyle(
+                                  context.watch<AuthProvider>().isGuest
+                                      ? 'Sem conta — dados só neste celular'
+                                      : 'Seu controle financeiro na rua',
+                                  style: const TextStyle(
                                     fontSize: 13,
                                     color: AppColors.textSecondary,
                                   ),
@@ -110,7 +113,7 @@ class DashboardScreen extends StatelessWidget {
                       const SizedBox(height: 12),
                       SummaryCards(resumo: resumo),
                       const SizedBox(height: 20),
-                      EarningsChart(data: chartData),
+                      EarningsChart(data: chartData, periodo: finance.periodo),
                       const SizedBox(height: 24),
                     ],
                   ),

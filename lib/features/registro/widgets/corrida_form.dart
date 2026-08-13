@@ -4,11 +4,16 @@ import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/widgets/datetime_field.dart';
+import '../../../data/models/corrida.dart';
 import '../../../providers/finance_provider.dart';
 import 'payment_selector.dart';
+import 'platform_selector.dart';
 
 class CorridaForm extends StatefulWidget {
-  const CorridaForm({super.key});
+  const CorridaForm({super.key, this.corrida});
+
+  final Corrida? corrida;
 
   @override
   State<CorridaForm> createState() => _CorridaFormState();
@@ -20,21 +25,42 @@ class _CorridaFormState extends State<CorridaForm> {
   final _taxaCtrl = TextEditingController();
   final _taxaPercentCtrl = TextEditingController();
 
+  late DateTime _dataHora;
   String _formaPagamento = 'Pix';
+  String _plataforma = '99';
   bool _usarPercentual = true;
   bool _saving = false;
+
+  bool get _editing => widget.corrida != null;
 
   @override
   void initState() {
     super.initState();
+    final existing = widget.corrida;
+    _dataHora = existing?.dataHora ?? DateTime.now();
+
+    if (existing != null) {
+      _valorBrutoCtrl.text = formatInputBrl(existing.valorBruto);
+      _taxaCtrl.text = formatInputBrl(existing.taxaApp);
+      _formaPagamento = existing.formaPagamento;
+      _plataforma = existing.plataforma;
+      if (existing.valorBruto > 0) {
+        final percent = (existing.taxaApp / existing.valorBruto) * 100;
+        _taxaPercentCtrl.text = percent.toStringAsFixed(
+          percent.truncateToDouble() == percent ? 0 : 1,
+        );
+      }
+    }
+
     _valorBrutoCtrl.addListener(_recalcularTaxa);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final taxa = context.read<FinanceProvider>().taxaPadraoPercent;
+      if (!mounted || existing != null) return;
+      final finance = context.read<FinanceProvider>();
+      final taxa = finance.taxaPadraoPercent;
       _taxaPercentCtrl.text = taxa.toStringAsFixed(
         taxa.truncateToDouble() == taxa ? 0 : 1,
       );
-      setState(() {});
+      setState(() => _plataforma = finance.plataformaPadrao);
     });
   }
 
@@ -68,7 +94,9 @@ class _CorridaFormState extends State<CorridaForm> {
 
     if (taxa > bruto) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('A taxa não pode ser maior que o valor bruto.')),
+        const SnackBar(
+          content: Text('A taxa não pode ser maior que o valor bruto.'),
+        ),
       );
       return;
     }
@@ -76,27 +104,51 @@ class _CorridaFormState extends State<CorridaForm> {
     setState(() => _saving = true);
     try {
       final finance = context.read<FinanceProvider>();
-      if (_usarPercentual) {
+      if (!_editing && _usarPercentual) {
         final percent = parseBrl(_taxaPercentCtrl.text);
         if (percent != null) {
           await finance.setTaxaPadraoPercent(percent);
         }
       }
-      await finance.adicionarCorrida(
-        valorBruto: bruto,
-        taxaApp: taxa,
-        formaPagamento: _formaPagamento,
-      );
+
+      if (_editing) {
+        await finance.atualizarCorrida(
+          widget.corrida!.copyWith(
+            dataHora: _dataHora,
+            valorBruto: bruto,
+            formaPagamento: _formaPagamento,
+            taxaApp: taxa,
+            plataforma: _plataforma,
+          ),
+        );
+      } else {
+        await finance.adicionarCorrida(
+          valorBruto: bruto,
+          taxaApp: taxa,
+          formaPagamento: _formaPagamento,
+          plataforma: _plataforma,
+          dataHora: _dataHora,
+        );
+        await finance.setPlataformaPadrao(_plataforma);
+      }
 
       if (!mounted) return;
+      if (_editing) {
+        final messenger = ScaffoldMessenger.of(context);
+        Navigator.of(context).pop();
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Corrida atualizada.')),
+        );
+        return;
+      }
+
       _valorBrutoCtrl.clear();
       _taxaCtrl.clear();
+      _dataHora = DateTime.now();
       _recalcularTaxa();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Corrida salva! Líquido: ${formatBrl(bruto - taxa)}',
-          ),
+          content: Text('Corrida salva! Líquido: ${formatBrl(bruto - taxa)}'),
         ),
       );
     } finally {
@@ -115,20 +167,28 @@ class _CorridaFormState extends State<CorridaForm> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
-          const Text(
-            'Nova corrida',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: AppColors.textPrimary,
+          if (!_editing) ...[
+            const Text(
+              'Nova corrida',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
             ),
+            const SizedBox(height: 4),
+            const Text(
+              'Lance rápido — valor, app, taxa e pagamento',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            ),
+            const SizedBox(height: 24),
+          ] else
+            const SizedBox(height: 8),
+          DateTimeField(
+            value: _dataHora,
+            onChanged: (v) => setState(() => _dataHora = v),
           ),
-          const SizedBox(height: 4),
-          const Text(
-            'Lance rápido — valor, taxa e pagamento',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-          ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           TextFormField(
             controller: _valorBrutoCtrl,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -163,10 +223,7 @@ class _CorridaFormState extends State<CorridaForm> {
               const Expanded(
                 child: Text(
                   'Taxa do App',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                 ),
               ),
               Text(
@@ -194,8 +251,9 @@ class _CorridaFormState extends State<CorridaForm> {
                 Expanded(
                   child: TextFormField(
                     controller: _taxaPercentCtrl,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                     ],
@@ -229,7 +287,9 @@ class _CorridaFormState extends State<CorridaForm> {
           ] else ...[
             TextFormField(
               controller: _taxaCtrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
               ],
@@ -247,6 +307,16 @@ class _CorridaFormState extends State<CorridaForm> {
               },
             ),
           ],
+          const SizedBox(height: 24),
+          const Text(
+            'App da corrida',
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+          ),
+          const SizedBox(height: 12),
+          PlatformSelector(
+            selected: _plataforma,
+            onChanged: (v) => setState(() => _plataforma = v),
+          ),
           const SizedBox(height: 24),
           const Text(
             'Forma de pagamento',
@@ -295,8 +365,18 @@ class _CorridaFormState extends State<CorridaForm> {
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.check_circle_outline_rounded),
-              label: Text(_saving ? 'Salvando...' : 'Salvar corrida'),
+                  : Icon(
+                      _editing
+                          ? Icons.save_rounded
+                          : Icons.check_circle_outline_rounded,
+                    ),
+              label: Text(
+                _saving
+                    ? 'Salvando...'
+                    : _editing
+                    ? 'Salvar alterações'
+                    : 'Salvar corrida',
+              ),
             ),
           ),
         ],

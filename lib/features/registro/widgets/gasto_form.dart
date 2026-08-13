@@ -4,10 +4,14 @@ import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/widgets/datetime_field.dart';
+import '../../../data/models/gasto.dart';
 import '../../../providers/finance_provider.dart';
 
 class GastoForm extends StatefulWidget {
-  const GastoForm({super.key});
+  const GastoForm({super.key, this.gasto});
+
+  final Gasto? gasto;
 
   @override
   State<GastoForm> createState() => _GastoFormState();
@@ -18,7 +22,28 @@ class _GastoFormState extends State<GastoForm> {
   final _combustivelCtrl = TextEditingController();
   final _alimentacaoCtrl = TextEditingController();
   final _outrosCtrl = TextEditingController();
+  late DateTime _dataHora;
   bool _saving = false;
+
+  bool get _editing => widget.gasto != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final existing = widget.gasto;
+    _dataHora = existing?.data ?? DateTime.now();
+    if (existing != null) {
+      if (existing.combustivel > 0) {
+        _combustivelCtrl.text = formatInputBrl(existing.combustivel);
+      }
+      if (existing.alimentacao > 0) {
+        _alimentacaoCtrl.text = formatInputBrl(existing.alimentacao);
+      }
+      if (existing.outros > 0) {
+        _outrosCtrl.text = formatInputBrl(existing.outros);
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -53,16 +78,39 @@ class _GastoFormState extends State<GastoForm> {
 
     setState(() => _saving = true);
     try {
-      await context.read<FinanceProvider>().adicionarGasto(
+      final finance = context.read<FinanceProvider>();
+      if (_editing) {
+        await finance.atualizarGasto(
+          widget.gasto!.copyWith(
+            data: _dataHora,
             combustivel: combustivel,
             alimentacao: alimentacao,
             outros: outros,
-          );
+          ),
+        );
+      } else {
+        await finance.adicionarGasto(
+          combustivel: combustivel,
+          alimentacao: alimentacao,
+          outros: outros,
+          data: _dataHora,
+        );
+      }
 
       if (!mounted) return;
+      if (_editing) {
+        final messenger = ScaffoldMessenger.of(context);
+        Navigator.of(context).pop();
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Gasto atualizado.')),
+        );
+        return;
+      }
+
       _combustivelCtrl.clear();
       _alimentacaoCtrl.clear();
       _outrosCtrl.clear();
+      _dataHora = DateTime.now();
       setState(() {});
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Gastos salvos! Total: ${formatBrl(total)}')),
@@ -81,9 +129,7 @@ class _GastoFormState extends State<GastoForm> {
     return TextFormField(
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-      ],
+      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
       onChanged: (_) => setState(() {}),
       decoration: InputDecoration(
         labelText: label,
@@ -106,20 +152,28 @@ class _GastoFormState extends State<GastoForm> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
-          const Text(
-            'Gastos do dia',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: AppColors.textPrimary,
+          if (!_editing) ...[
+            const Text(
+              'Gastos do dia',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
             ),
+            const SizedBox(height: 4),
+            const Text(
+              'Combustível, alimentação e outros custos',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            ),
+            const SizedBox(height: 24),
+          ] else
+            const SizedBox(height: 8),
+          DateTimeField(
+            value: _dataHora,
+            onChanged: (v) => setState(() => _dataHora = v),
           ),
-          const SizedBox(height: 4),
-          const Text(
-            'Combustível, alimentação e outros custos',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-          ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           _campo(
             controller: _combustivelCtrl,
             label: 'Combustível',
@@ -183,7 +237,13 @@ class _GastoFormState extends State<GastoForm> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.save_rounded),
-              label: Text(_saving ? 'Salvando...' : 'Salvar gastos'),
+              label: Text(
+                _saving
+                    ? 'Salvando...'
+                    : _editing
+                    ? 'Salvar alterações'
+                    : 'Salvar gastos',
+              ),
             ),
           ),
         ],

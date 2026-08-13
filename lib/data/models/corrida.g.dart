@@ -19,13 +19,14 @@ class CorridaAdapter extends TypeAdapter<Corrida> {
       valorBruto: fields[2] as double,
       formaPagamento: fields[3] as String,
       taxaApp: fields[4] as double,
+      plataforma: fields[5] as String? ?? 'Outro',
     );
   }
 
   @override
   void write(BinaryWriter writer, Corrida obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -35,7 +36,9 @@ class CorridaAdapter extends TypeAdapter<Corrida> {
       ..writeByte(3)
       ..write(obj.formaPagamento)
       ..writeByte(4)
-      ..write(obj.taxaApp);
+      ..write(obj.taxaApp)
+      ..writeByte(5)
+      ..write(obj.plataforma);
   }
 
   @override

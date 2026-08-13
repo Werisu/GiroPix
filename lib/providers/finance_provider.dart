@@ -37,9 +37,9 @@ class FinanceProvider extends ChangeNotifier {
     CorridaRepository? corridaRepository,
     GastoRepository? gastoRepository,
     BackupService? backupService,
-  })  : _corridaRepo = corridaRepository ?? CorridaRepository(),
-        _gastoRepo = gastoRepository ?? GastoRepository(),
-        _backupService = backupService ?? BackupService();
+  }) : _corridaRepo = corridaRepository ?? CorridaRepository(),
+       _gastoRepo = gastoRepository ?? GastoRepository(),
+       _backupService = backupService ?? BackupService();
 
   final CorridaRepository _corridaRepo;
   final GastoRepository _gastoRepo;
@@ -49,18 +49,21 @@ class FinanceProvider extends ChangeNotifier {
   List<Gasto> _gastos = [];
   PeriodoFiltro _periodo = PeriodoFiltro.dia;
   double _taxaPadraoPercent = HiveService.taxaPadraoDefault;
+  String _plataformaPadrao = HiveService.plataformaPadraoDefault;
   bool _loading = true;
 
   List<Corrida> get corridas => _corridas;
   List<Gasto> get gastos => _gastos;
   PeriodoFiltro get periodo => _periodo;
   double get taxaPadraoPercent => _taxaPadraoPercent;
+  String get plataformaPadrao => _plataformaPadrao;
   bool get loading => _loading;
 
   Future<void> init() async {
     _loading = true;
     notifyListeners();
     _taxaPadraoPercent = HiveService.getTaxaPadraoPercent();
+    _plataformaPadrao = HiveService.getPlataformaPadrao();
     await reload();
     _loading = false;
     notifyListeners();
@@ -70,6 +73,7 @@ class FinanceProvider extends ChangeNotifier {
     _corridas = await _corridaRepo.getAll();
     _gastos = await _gastoRepo.getAll();
     _taxaPadraoPercent = HiveService.getTaxaPadraoPercent();
+    _plataformaPadrao = HiveService.getPlataformaPadrao();
     notifyListeners();
   }
 
@@ -85,10 +89,17 @@ class FinanceProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setPlataformaPadrao(String plataforma) async {
+    _plataformaPadrao = plataforma;
+    await HiveService.setPlataformaPadrao(plataforma);
+    notifyListeners();
+  }
+
   Future<void> adicionarCorrida({
     required double valorBruto,
     required double taxaApp,
     required String formaPagamento,
+    String plataforma = '99',
     DateTime? dataHora,
   }) async {
     final corrida = Corrida(
@@ -96,6 +107,7 @@ class FinanceProvider extends ChangeNotifier {
       valorBruto: valorBruto,
       formaPagamento: formaPagamento,
       taxaApp: taxaApp,
+      plataforma: plataforma,
     );
     await _corridaRepo.save(corrida);
     await reload();
@@ -113,6 +125,16 @@ class FinanceProvider extends ChangeNotifier {
       alimentacao: alimentacao,
       outros: outros,
     );
+    await _gastoRepo.save(gasto);
+    await reload();
+  }
+
+  Future<void> atualizarCorrida(Corrida corrida) async {
+    await _corridaRepo.save(corrida);
+    await reload();
+  }
+
+  Future<void> atualizarGasto(Gasto gasto) async {
     await _gastoRepo.save(gasto);
     await reload();
   }
@@ -169,7 +191,10 @@ class FinanceProvider extends ChangeNotifier {
       qtd++;
     }
 
-    final totalGastos = gastosPeriodo.fold<double>(0, (sum, g) => sum + g.total);
+    final totalGastos = gastosPeriodo.fold<double>(
+      0,
+      (sum, g) => sum + g.total,
+    );
 
     return ResumoFinanceiro(
       totalBruto: bruto,
@@ -180,16 +205,30 @@ class FinanceProvider extends ChangeNotifier {
     );
   }
 
-  /// Ganhos líquidos por dia nos últimos 7 dias (índice 0 = mais antigo).
-  List<({DateTime dia, double ganhos})> ganhosUltimos7Dias() {
-    final dias = ultimosDias(7);
-    return dias.map((dia) {
-      final inicio = inicioDoDia(dia);
-      final fim = inicio.add(const Duration(days: 1));
+  /// Ganhos líquidos no período filtrado (índice 0 = mais antigo).
+  /// Dia: faixas de 3 horas. Demais: um ponto por dia.
+  List<({DateTime inicio, double ganhos})> ganhosDoPeriodo([
+    PeriodoFiltro? periodo,
+  ]) {
+    final p = periodo ?? _periodo;
+    final intervalo = intervaloPeriodo(p);
+
+    if (p == PeriodoFiltro.dia) {
+      return faixasHorariasDoDia(intervalo.inicio).map((faixa) {
+        final total = _corridas
+            .where((c) => estaNoIntervalo(c.dataHora, faixa.inicio, faixa.fim))
+            .fold<double>(0, (sum, c) => sum + c.valorLiquido);
+        return (inicio: faixa.inicio, ganhos: total);
+      }).toList();
+    }
+
+    return diasNoIntervalo(intervalo.inicio, intervalo.fim).map((dia) {
+      final inicio = dia;
+      final fim = dia.add(const Duration(days: 1));
       final total = _corridas
           .where((c) => estaNoIntervalo(c.dataHora, inicio, fim))
           .fold<double>(0, (sum, c) => sum + c.valorLiquido);
-      return (dia: dia, ganhos: total);
+      return (inicio: inicio, ganhos: total);
     }).toList();
   }
 

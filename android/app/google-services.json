@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "912001434920",
+    "project_id": "giropix-1d557",
+    "storage_bucket": "giropix-1d557.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:912001434920:android:d631518beab5a167757c1d",
+        "android_client_info": {
+          "package_name": "com.giropix.giropix"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBhxileMZAJ59F9rbq7nY5Z2h2Qq6RZddY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

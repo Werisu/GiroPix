@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../providers/finance_provider.dart';
+import '../registro/editar_lancamento_screen.dart';
 
 class HistoricoScreen extends StatelessWidget {
   const HistoricoScreen({super.key});
@@ -36,7 +37,7 @@ class HistoricoScreen extends StatelessWidget {
                     ),
                     SizedBox(height: 4),
                     Text(
-                      'Extrato de corridas e gastos',
+                      'Toque para editar · deslize para excluir',
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 13,
@@ -58,14 +59,20 @@ class HistoricoScreen extends StatelessWidget {
                             return _CorridaTile(
                               item: item,
                               dateLabel: dateFmt.format(item.dataHora),
+                              onEdit: () => Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => EditarCorridaScreen(
+                                    corrida: item.corrida,
+                                  ),
+                                ),
+                              ),
                               onDelete: () => _confirmarExclusao(
                                 context,
                                 titulo: 'Excluir corrida?',
                                 mensagem:
                                     'Remover corrida de ${formatBrl(item.corrida.valorBruto)}?',
-                                onConfirm: () => finance.excluirCorrida(
-                                  item.corrida.id,
-                                ),
+                                onConfirm: () =>
+                                    finance.excluirCorrida(item.corrida.id),
                               ),
                             );
                           }
@@ -73,14 +80,19 @@ class HistoricoScreen extends StatelessWidget {
                           return _GastoTile(
                             item: gastoItem,
                             dateLabel: dateFmt.format(item.dataHora),
+                            onEdit: () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) =>
+                                    EditarGastoScreen(gasto: gastoItem.gasto),
+                              ),
+                            ),
                             onDelete: () => _confirmarExclusao(
                               context,
                               titulo: 'Excluir gasto?',
                               mensagem:
                                   'Remover gastos de ${formatBrl(gastoItem.gasto.total)}?',
-                              onConfirm: () => finance.excluirGasto(
-                                gastoItem.gasto.id,
-                              ),
+                              onConfirm: () =>
+                                  finance.excluirGasto(gastoItem.gasto.id),
                             ),
                           );
                         },
@@ -122,9 +134,9 @@ class HistoricoScreen extends StatelessWidget {
     if (ok == true && context.mounted) {
       await onConfirm();
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Lançamento excluído.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Lançamento excluído.')));
       }
     }
   }
@@ -172,11 +184,13 @@ class _CorridaTile extends StatelessWidget {
   const _CorridaTile({
     required this.item,
     required this.dateLabel,
+    required this.onEdit,
     required this.onDelete,
   });
 
   final HistoricoCorrida item;
   final String dateLabel;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   Color get _paymentColor {
@@ -211,109 +225,119 @@ class _CorridaTile extends StatelessWidget {
         ),
         child: const Icon(Icons.delete_outline, color: AppColors.danger),
       ),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onEdit,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.neonGreen.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.two_wheeler_rounded,
-                color: AppColors.neonGreen,
-              ),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.border),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.neonGreen.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.two_wheeler_rounded,
+                    color: AppColors.neonGreen,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Corrida',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              c.plataforma,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _paymentColor.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              c.formaPagamento,
+                              style: TextStyle(
+                                color: _paymentColor,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        dateLabel,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _paymentColor.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          c.formaPagamento,
-                          style: TextStyle(
-                            color: _paymentColor,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                          ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Taxa: ${formatBrl(c.taxaApp)}',
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 11,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    dateLabel,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Taxa: ${formatBrl(c.taxaApp)}',
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  formatBrl(c.valorLiquido),
-                  style: const TextStyle(
-                    color: AppColors.neonGreen,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                  ),
                 ),
-                Text(
-                  'bruto ${formatBrl(c.valorBruto)}',
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 11,
-                  ),
-                ),
-                IconButton(
-                  onPressed: onDelete,
-                  icon: const Icon(Icons.delete_outline, size: 20),
-                  color: AppColors.textSecondary,
-                  visualDensity: VisualDensity.compact,
-                  tooltip: 'Excluir',
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      formatBrl(c.valorLiquido),
+                      style: const TextStyle(
+                        color: AppColors.neonGreen,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      'bruto ${formatBrl(c.valorBruto)}',
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: onDelete,
+                      icon: const Icon(Icons.delete_outline, size: 20),
+                      color: AppColors.textSecondary,
+                      visualDensity: VisualDensity.compact,
+                      tooltip: 'Excluir',
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -324,11 +348,13 @@ class _GastoTile extends StatelessWidget {
   const _GastoTile({
     required this.item,
     required this.dateLabel,
+    required this.onEdit,
     required this.onDelete,
   });
 
   final HistoricoGasto item;
   final String dateLabel;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   @override
@@ -356,81 +382,88 @@ class _GastoTile extends StatelessWidget {
         ),
         child: const Icon(Icons.delete_outline, color: AppColors.danger),
       ),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onEdit,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.expense.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.receipt_long_rounded,
-                color: AppColors.expense,
-              ),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.border),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Gasto',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    dateLabel,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                    ),
-                  ),
-                  if (detalhes.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      detalhes,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            child: Row(
               children: [
-                Text(
-                  '- ${formatBrl(g.total)}',
-                  style: const TextStyle(
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.expense.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.receipt_long_rounded,
                     color: AppColors.expense,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
                   ),
                 ),
-                IconButton(
-                  onPressed: onDelete,
-                  icon: const Icon(Icons.delete_outline, size: 20),
-                  color: AppColors.textSecondary,
-                  visualDensity: VisualDensity.compact,
-                  tooltip: 'Excluir',
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Gasto',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        dateLabel,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                      if (detalhes.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          detalhes,
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '- ${formatBrl(g.total)}',
+                      style: const TextStyle(
+                        color: AppColors.expense,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: onDelete,
+                      icon: const Icon(Icons.delete_outline, size: 20),
+                      color: AppColors.textSecondary,
+                      visualDensity: VisualDensity.compact,
+                      tooltip: 'Excluir',
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );
