@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -23,6 +24,16 @@ class _BackupScreenState extends State<BackupScreen> {
 
   Future<void> _exportar() async {
     if (_busy) return;
+    if (kIsWeb) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Backup de arquivo está disponível no app Android.',
+          ),
+        ),
+      );
+      return;
+    }
     setState(() => _busy = true);
     try {
       final finance = context.read<FinanceProvider>();
@@ -62,6 +73,16 @@ class _BackupScreenState extends State<BackupScreen> {
 
   Future<void> _importar() async {
     if (_busy) return;
+    if (kIsWeb) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Importar backup está disponível no app Android.',
+          ),
+        ),
+      );
+      return;
+    }
 
     final picked = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -310,7 +331,11 @@ class _BackupScreenState extends State<BackupScreen> {
                   onSignOut: _sair,
                 )
               else
-                _GuestAccountCard(busy: auth.busy || _busy, onSignIn: _entrar),
+                _GuestAccountCard(
+                  busy: auth.busy || _busy,
+                  showGoogleSignIn: auth.googleSignInAvailable,
+                  onSignIn: _entrar,
+                ),
               if (auth.error != null) ...[
                 const SizedBox(height: 12),
                 Text(
@@ -413,9 +438,14 @@ class _BackupScreenState extends State<BackupScreen> {
 }
 
 class _GuestAccountCard extends StatelessWidget {
-  const _GuestAccountCard({required this.busy, required this.onSignIn});
+  const _GuestAccountCard({
+    required this.busy,
+    required this.showGoogleSignIn,
+    required this.onSignIn,
+  });
 
   final bool busy;
+  final bool showGoogleSignIn;
   final VoidCallback onSignIn;
 
   @override
@@ -444,32 +474,37 @@ class _GuestAccountCard extends StatelessWidget {
             style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'Os lançamentos ficam neste celular. Entre com Google quando '
-            'quiser preparar a nuvem.',
-            style: TextStyle(
+          Text(
+            showGoogleSignIn
+                ? 'Os lançamentos ficam neste celular. Entre com Google quando '
+                    'quiser preparar a nuvem.'
+                : 'No navegador o app roda sem conta. Login com Google está '
+                    'disponível no app Android.',
+            style: const TextStyle(
               color: AppColors.textSecondary,
               fontSize: 12,
               height: 1.4,
             ),
           ),
-          const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: busy ? null : onSignIn,
-              icon: const Icon(Icons.g_mobiledata_rounded, size: 22),
-              label: const Text('Entrar com Google'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.textPrimary,
-                side: const BorderSide(color: AppColors.border),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          if (showGoogleSignIn) ...[
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: busy ? null : onSignIn,
+                icon: const Icon(Icons.g_mobiledata_rounded, size: 22),
+                label: const Text('Entrar com Google'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.textPrimary,
+                  side: const BorderSide(color: AppColors.border),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );

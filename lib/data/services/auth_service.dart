@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthException implements Exception {
@@ -12,36 +13,53 @@ class AuthException implements Exception {
 
 /// Autenticação com Firebase + Google Sign-In.
 class AuthService {
-  AuthService({FirebaseAuth? auth, GoogleSignIn? googleSignIn})
-    : _auth = auth ?? FirebaseAuth.instance,
-      _googleSignIn = googleSignIn ?? GoogleSignIn.instance;
+  AuthService({
+    FirebaseAuth? auth,
+    this._googleSignIn,
+  }) : _auth = auth ?? (Firebase.apps.isEmpty ? null : FirebaseAuth.instance);
 
-  final FirebaseAuth _auth;
-  final GoogleSignIn _googleSignIn;
+  final FirebaseAuth? _auth;
+  GoogleSignIn? _googleSignIn;
 
   bool _googleReady = false;
 
-  User? get currentUser => _auth.currentUser;
+  bool get isAvailable => _auth != null;
 
-  Stream<User?> authStateChanges() => _auth.authStateChanges();
+  User? get currentUser => _auth?.currentUser;
+
+  Stream<User?> authStateChanges() {
+    final auth = _auth;
+    if (auth == null) return Stream<User?>.value(null);
+    return auth.authStateChanges();
+  }
 
   Future<void> ensureGoogleInitialized() async {
     if (_googleReady) return;
-    await _googleSignIn.initialize();
+    _googleSignIn ??= GoogleSignIn.instance;
+    await _googleSignIn!.initialize();
     _googleReady = true;
   }
 
   Future<UserCredential> signInWithGoogle() async {
+    final auth = _auth;
+    if (auth == null) {
+      throw AuthException(
+        'Login com Google não está disponível neste dispositivo. '
+        'Use o app Android.',
+      );
+    }
+
     try {
       await ensureGoogleInitialized();
+      final google = _googleSignIn!;
 
-      if (!_googleSignIn.supportsAuthenticate()) {
+      if (!google.supportsAuthenticate()) {
         throw AuthException(
           'Login com Google não é suportado neste dispositivo.',
         );
       }
 
-      final account = await _googleSignIn.authenticate();
+      final account = await google.authenticate();
       final idToken = account.authentication.idToken;
       if (idToken == null || idToken.isEmpty) {
         throw AuthException(
@@ -51,7 +69,7 @@ class AuthService {
       }
 
       final credential = GoogleAuthProvider.credential(idToken: idToken);
-      return await _auth.signInWithCredential(credential);
+      return await auth.signInWithCredential(credential);
     } on GoogleSignInException catch (e) {
       if (e.code == GoogleSignInExceptionCode.canceled) {
         throw AuthException('Login cancelado.');
@@ -73,11 +91,17 @@ class AuthService {
   }
 
   Future<void> signOut() async {
+    final auth = _auth;
+    if (auth == null) return;
+
     try {
       await ensureGoogleInitialized();
-      await Future.wait([_auth.signOut(), _googleSignIn.signOut()]);
+      await Future.wait([
+        auth.signOut(),
+        if (_googleSignIn != null) _googleSignIn!.signOut(),
+      ]);
     } catch (_) {
-      await _auth.signOut();
+      await auth.signOut();
     }
   }
 

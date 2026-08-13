@@ -92,53 +92,54 @@ class LoginScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
               ],
-              SizedBox(
-                height: 54,
-                child: ElevatedButton(
-                  onPressed: auth.busy
-                      ? null
-                      : () async {
-                          auth.clearError();
-                          await auth.signInWithGoogle();
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.surfaceLight,
-                    foregroundColor: AppColors.textPrimary,
-                    disabledBackgroundColor: AppColors.surfaceLight.withValues(
-                      alpha: 0.6,
+              if (auth.googleSignInAvailable) ...[
+                SizedBox(
+                  height: 54,
+                  child: ElevatedButton(
+                    onPressed: auth.busy
+                        ? null
+                        : () async {
+                            auth.clearError();
+                            await auth.signInWithGoogle();
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.surfaceLight,
+                      foregroundColor: AppColors.textPrimary,
+                      disabledBackgroundColor: AppColors.surfaceLight
+                          .withValues(alpha: 0.6),
+                      side: const BorderSide(color: AppColors.border),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
-                    side: const BorderSide(color: AppColors.border),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: auth.busy
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.4,
-                            color: AppColors.neonGreen,
-                          ),
-                        )
-                      : const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.g_mobiledata_rounded, size: 32),
-                            SizedBox(width: 4),
-                            Text(
-                              'Continuar com Google',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                              ),
+                    child: auth.busy
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.4,
+                              color: AppColors.neonGreen,
                             ),
-                          ],
-                        ),
+                          )
+                        : const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.g_mobiledata_rounded, size: 32),
+                              SizedBox(width: 4),
+                              Text(
+                                'Continuar com Google',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
+                const SizedBox(height: 12),
+              ],
               SizedBox(
                 height: 54,
                 child: TextButton(

@@ -25,7 +25,15 @@ Future<void> main() async {
   );
 
   await initializeDateFormatting('pt_BR');
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  if (DefaultFirebaseOptions.isSupported) {
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    } catch (e, st) {
+      debugPrint('Firebase indisponível: $e\n$st');
+    }
+  }
   await HiveService.init();
 
   runApp(const GiroPixApp());

@@ -9,7 +9,7 @@ import '../data/services/auth_service.dart';
 class AuthProvider extends ChangeNotifier {
   AuthProvider({AuthService? authService})
     : _authService = authService ?? AuthService() {
-    _guestMode = HiveService.getGuestMode();
+    _guestMode = HiveService.getGuestMode() || !_authService.isAvailable;
     if (_guestMode) {
       _initialized = true;
     }
@@ -37,6 +37,7 @@ class AuthProvider extends ChangeNotifier {
   bool get isAuthenticated => _user != null;
   bool get isGuest => _guestMode && _user == null;
   bool get canUseApp => isAuthenticated || _guestMode;
+  bool get googleSignInAvailable => _authService.isAvailable;
   bool get initialized => _initialized;
   bool get busy => _busy;
   String? get error => _error;
