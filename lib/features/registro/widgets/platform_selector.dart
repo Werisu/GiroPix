@@ -20,7 +20,7 @@ class PlatformSelector extends StatelessWidget {
       color: AppColors.danger,
     ),
     (
-      label: 'Uber',
+      label: 'Maxim',
       icon: Icons.directions_car_rounded,
       color: AppColors.neonBlue,
     ),

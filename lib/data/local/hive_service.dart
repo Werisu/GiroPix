@@ -47,6 +47,7 @@ class HiveService {
   static String getPlataformaPadrao() {
     final value = settings.get(keyPlataformaPadrao) as String?;
     if (value == null || value.isEmpty) return plataformaPadraoDefault;
+    if (value == 'Uber') return 'Maxim';
     return value;
   }
 

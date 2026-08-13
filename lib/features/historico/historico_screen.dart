@@ -260,7 +260,7 @@ class _CorridaTile extends StatelessWidget {
                         children: [
                           Flexible(
                             child: Text(
-                              c.plataforma,
+                              c.plataforma == 'Uber' ? 'Maxim' : c.plataforma,
                               style: const TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 15,

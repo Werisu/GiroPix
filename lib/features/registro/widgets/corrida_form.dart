@@ -44,7 +44,7 @@ class _CorridaFormState extends State<CorridaForm> {
       _valorBrutoCtrl.text = formatInputBrl(existing.valorBruto);
       _taxaCtrl.text = formatInputBrl(existing.taxaApp);
       _formaPagamento = existing.formaPagamento;
-      _plataforma = existing.plataforma;
+      _plataforma = existing.plataforma == 'Uber' ? 'Maxim' : existing.plataforma;
       if (existing.valorBruto > 0) {
         final percent = (existing.taxaApp / existing.valorBruto) * 100;
         _taxaPercentCtrl.text = percent.toStringAsFixed(

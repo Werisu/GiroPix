@@ -20,7 +20,7 @@ class Corrida extends HiveObject {
   @HiveField(4)
   final double taxaApp;
 
-  /// 99 | iFood | Uber | Outro. Corridas antigas sem o campo viram Outro.
+  /// 99 | iFood | Maxim | Outro. Corridas antigas sem o campo viram Outro.
   @HiveField(5)
   final String plataforma;
 
