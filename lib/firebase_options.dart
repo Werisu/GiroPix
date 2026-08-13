@@ -64,4 +64,8 @@ class DefaultFirebaseOptions {
     projectId: 'giropix-1d557',
     storageBucket: 'giropix-1d557.firebasestorage.app',
   );
+
+  /// Client ID web (tipo 3) — obrigatório no google_sign_in 7 no Android.
+  static const String googleServerClientId =
+      '912001434920-ljtfnov7lhue2pj6hj59pjm35f1o3gtq.apps.googleusercontent.com';
 }

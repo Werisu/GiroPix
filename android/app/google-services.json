@@ -12,7 +12,20 @@
           "package_name": "com.giropix.giropix"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "912001434920-icbb1n9erjqra7sfl9vo9pja6lor4f22.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.giropix.giropix",
+            "certificate_hash": "100a02bb54361c52ba6f394ffa0fa7faa74337e9"
+          }
+        },
+        {
+          "client_id": "912001434920-ljtfnov7lhue2pj6hj59pjm35f1o3gtq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBhxileMZAJ59F9rbq7nY5Z2h2Qq6RZddY"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "912001434920-ljtfnov7lhue2pj6hj59pjm35f1o3gtq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

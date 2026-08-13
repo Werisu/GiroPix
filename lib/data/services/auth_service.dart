@@ -2,6 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../../firebase_options.dart';
+
 class AuthException implements Exception {
   AuthException(this.message);
 
@@ -36,7 +38,9 @@ class AuthService {
   Future<void> ensureGoogleInitialized() async {
     if (_googleReady) return;
     _googleSignIn ??= GoogleSignIn.instance;
-    await _googleSignIn!.initialize();
+    await _googleSignIn!.initialize(
+      serverClientId: DefaultFirebaseOptions.googleServerClientId,
+    );
     _googleReady = true;
   }
 
