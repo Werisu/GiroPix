@@ -110,13 +110,21 @@ class BackupService {
         if (item is! Map) {
           throw BackupException('Registro de corrida inválido no backup.');
         }
-        corridas.add(Corrida.fromJson(Map<String, dynamic>.from(item)));
+        corridas.add(
+          Corrida.fromJson(Map<String, dynamic>.from(item)).copyWith(
+            updatedAt: DateTime.now().toUtc(),
+          ),
+        );
       }
       for (final item in gastosList) {
         if (item is! Map) {
           throw BackupException('Registro de gasto inválido no backup.');
         }
-        gastos.add(Gasto.fromJson(Map<String, dynamic>.from(item)));
+        gastos.add(
+          Gasto.fromJson(Map<String, dynamic>.from(item)).copyWith(
+            updatedAt: DateTime.now().toUtc(),
+          ),
+        );
       }
     } on BackupException {
       rethrow;

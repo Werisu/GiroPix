@@ -15,7 +15,15 @@ class GiroPixApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => FinanceProvider()..init()),
+        ChangeNotifierProxyProvider<AuthProvider, FinanceProvider>(
+          create: (_) => FinanceProvider()..init(),
+          update: (_, auth, finance) {
+            finance!.attachAuthUid(
+              auth.isAuthenticated ? auth.user?.uid : null,
+            );
+            return finance;
+          },
+        ),
       ],
       child: MaterialApp(
         title: 'GiroPix',

@@ -1,1 +1,25 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"giropix-1d557","appId":"1:912001434920:android:d631518beab5a167757c1d","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"giropix-1d557","configurations":{"android":"1:912001434920:android:d631518beab5a167757c1d"}}}}}}
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "giropix-1d557",
+          "appId": "1:912001434920:android:d631518beab5a167757c1d",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "giropix-1d557",
+          "configurations": {
+            "android": "1:912001434920:android:d631518beab5a167757c1d"
+          }
+        }
+      }
+    }
+  }
+}

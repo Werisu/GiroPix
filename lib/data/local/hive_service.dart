@@ -2,6 +2,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import '../models/corrida.dart';
 import '../models/gasto.dart';
+import '../services/sync_merger.dart';
 
 class HiveService {
   static const String corridasBox = 'corridas';
@@ -11,6 +12,10 @@ class HiveService {
   static const String keyTaxaPadraoPercent = 'taxa_padrao_percent';
   static const String keyPlataformaPadrao = 'plataforma_padrao';
   static const String keyGuestMode = 'guest_mode';
+  static const String keyLastSyncAt = 'last_sync_at';
+  static const String keySettingsUpdatedAt = 'settings_updated_at';
+  static const String keyPendingDeletes = 'pending_deletes';
+  static const String keyDataOwnerUid = 'data_owner_uid';
   static const double taxaPadraoDefault = 15.0;
   static const String plataformaPadraoDefault = '99';
 
@@ -59,5 +64,80 @@ class HiveService {
 
   static Future<void> setGuestMode(bool enabled) async {
     await settings.put(keyGuestMode, enabled);
+  }
+
+  static DateTime? getLastSyncAt() {
+    final raw = settings.get(keyLastSyncAt) as String?;
+    if (raw == null || raw.isEmpty) return null;
+    return DateTime.tryParse(raw);
+  }
+
+  static Future<void> setLastSyncAt(DateTime at) async {
+    await settings.put(keyLastSyncAt, at.toUtc().toIso8601String());
+  }
+
+  static DateTime? getSettingsUpdatedAt() {
+    final raw = settings.get(keySettingsUpdatedAt) as String?;
+    if (raw == null || raw.isEmpty) return null;
+    return DateTime.tryParse(raw);
+  }
+
+  static Future<void> setSettingsUpdatedAt(DateTime at) async {
+    await settings.put(keySettingsUpdatedAt, at.toUtc().toIso8601String());
+  }
+
+  static List<PendingDelete> getPendingDeletes() {
+    final raw = settings.get(keyPendingDeletes);
+    if (raw is! List) return <PendingDelete>[];
+    final result = <PendingDelete>[];
+    for (final item in raw) {
+      if (item is Map) {
+        try {
+          result.add(
+            PendingDelete.fromJson(Map<String, dynamic>.from(item)),
+          );
+        } catch (_) {}
+      }
+    }
+    return result;
+  }
+
+  static Future<void> addPendingDelete(PendingDelete delete) async {
+    final current = List<PendingDelete>.from(getPendingDeletes());
+    current.removeWhere((p) => p.id == delete.id && p.type == delete.type);
+    current.add(delete);
+    await setPendingDeletes(current);
+  }
+
+  static Future<void> setPendingDeletes(List<PendingDelete> deletes) async {
+    await settings.put(
+      keyPendingDeletes,
+      deletes.map((p) => p.toJson()).toList(),
+    );
+  }
+
+  static Future<void> clearPendingDeletes() async {
+    await settings.put(keyPendingDeletes, <Map<String, dynamic>>[]);
+  }
+
+  static String? getDataOwnerUid() {
+    final value = settings.get(keyDataOwnerUid) as String?;
+    if (value == null || value.isEmpty) return null;
+    return value;
+  }
+
+  static Future<void> setDataOwnerUid(String uid) async {
+    await settings.put(keyDataOwnerUid, uid);
+  }
+
+  /// Apaga lançamentos locais ao trocar de conta, sem misturar na nuvem da outra.
+  static Future<void> clearFinanceData() async {
+    await corridas.clear();
+    await gastos.clear();
+    await clearPendingDeletes();
+    await settings.delete(keyLastSyncAt);
+    await settings.delete(keySettingsUpdatedAt);
+    await settings.put(keyTaxaPadraoPercent, taxaPadraoDefault);
+    await settings.put(keyPlataformaPadrao, plataformaPadraoDefault);
   }
 }

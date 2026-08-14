@@ -24,6 +24,10 @@ class Corrida extends HiveObject {
   @HiveField(5)
   final String plataforma;
 
+  /// Usado na sincronização (último a escrever vence). Ausente em dados antigos.
+  @HiveField(6)
+  final DateTime? updatedAt;
+
   Corrida({
     String? id,
     required this.dataHora,
@@ -31,7 +35,10 @@ class Corrida extends HiveObject {
     required this.formaPagamento,
     required this.taxaApp,
     this.plataforma = 'Outro',
+    this.updatedAt,
   }) : id = id ?? const Uuid().v4();
+
+  DateTime get syncStamp => (updatedAt ?? dataHora).toUtc();
 
   double get valorLiquido => valorBruto - taxaApp;
 
@@ -42,6 +49,7 @@ class Corrida extends HiveObject {
     String? formaPagamento,
     double? taxaApp,
     String? plataforma,
+    DateTime? updatedAt,
   }) {
     return Corrida(
       id: id ?? this.id,
@@ -50,6 +58,7 @@ class Corrida extends HiveObject {
       formaPagamento: formaPagamento ?? this.formaPagamento,
       taxaApp: taxaApp ?? this.taxaApp,
       plataforma: plataforma ?? this.plataforma,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
@@ -60,6 +69,7 @@ class Corrida extends HiveObject {
     'formaPagamento': formaPagamento,
     'taxaApp': taxaApp,
     'plataforma': plataforma,
+    if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
   };
 
   factory Corrida.fromJson(Map<String, dynamic> json) {
@@ -70,6 +80,12 @@ class Corrida extends HiveObject {
       formaPagamento: json['formaPagamento'] as String,
       taxaApp: (json['taxaApp'] as num).toDouble(),
       plataforma: json['plataforma'] as String? ?? 'Outro',
+      updatedAt: _parseOptionalDate(json['updatedAt']),
     );
   }
+}
+
+DateTime? _parseOptionalDate(dynamic value) {
+  if (value is String && value.isNotEmpty) return DateTime.tryParse(value);
+  return null;
 }

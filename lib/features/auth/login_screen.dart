@@ -159,7 +159,7 @@ class LoginScreen extends StatelessWidget {
               const SizedBox(height: 16),
               const Text(
                 'Os lançamentos ficam neste celular.\n'
-                'A conta é opcional e prepara o backup na nuvem.',
+                'Com Google, eles também sincronizam na nuvem.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: AppColors.textSecondary,

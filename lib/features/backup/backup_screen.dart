@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -344,52 +345,20 @@ class _BackupScreenState extends State<BackupScreen> {
                 ),
               ],
               const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline_rounded,
-                          color: AppColors.neonBlue,
-                          size: 20,
-                        ),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Seus dados ficam só neste celular por enquanto',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 10),
-                    Text(
-                      'Exporte um arquivo JSON e salve fora do app (Drive, '
-                      'WhatsApp, e-mail ou pasta Arquivos). A sincronização '
-                      'automática na nuvem vem na próxima etapa.',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                ),
+              _CloudSyncCard(
+                authenticated: auth.isAuthenticated,
+                available: finance.cloudSyncAvailable,
+                enabled: finance.cloudSyncEnabled,
+                syncing: finance.syncing || _busy,
+                lastSyncAt: finance.lastSyncAt,
+                error: finance.syncError,
+                onSync: finance.syncing || _busy
+                    ? null
+                    : () => finance.sincronizar(),
               ),
               const SizedBox(height: 20),
               const Text(
-                'Backup',
+                'Backup em arquivo',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
@@ -437,6 +406,120 @@ class _BackupScreenState extends State<BackupScreen> {
   }
 }
 
+class _CloudSyncCard extends StatelessWidget {
+  const _CloudSyncCard({
+    required this.authenticated,
+    required this.available,
+    required this.enabled,
+    required this.syncing,
+    required this.lastSyncAt,
+    required this.error,
+    required this.onSync,
+  });
+
+  final bool authenticated;
+  final bool available;
+  final bool enabled;
+  final bool syncing;
+  final DateTime? lastSyncAt;
+  final String? error;
+  final VoidCallback? onSync;
+
+  @override
+  Widget build(BuildContext context) {
+    final statusColor = error != null
+        ? AppColors.danger
+        : enabled
+            ? AppColors.neonGreen
+            : AppColors.neonBlue;
+
+    String subtitle;
+    if (!available) {
+      subtitle =
+          'A nuvem está disponível no app Android. Aqui os dados ficam só neste dispositivo.';
+    } else if (!authenticated) {
+      subtitle =
+          'Entre com Google para enviar corridas e gastos ao Cloud Firestore e recuperar em outro celular.';
+    } else if (syncing) {
+      subtitle = 'Sincronizando com a nuvem…';
+    } else if (error != null) {
+      subtitle = error!;
+    } else if (lastSyncAt != null) {
+      final stamp = DateFormat("dd/MM/yyyy 'às' HH:mm", 'pt_BR')
+          .format(lastSyncAt!.toLocal());
+      subtitle = 'Última sincronização: $stamp';
+    } else {
+      subtitle = 'A conta está ligada. Toque para sincronizar agora.';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.cloud_sync_rounded, color: statusColor, size: 20),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'Sincronização na nuvem',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              if (syncing && enabled)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.neonGreen,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              height: 1.4,
+            ),
+          ),
+          if (enabled) ...[
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: onSync,
+                icon: const Icon(Icons.sync_rounded, size: 18),
+                label: Text(error != null ? 'Tentar de novo' : 'Sincronizar agora'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.textPrimary,
+                  side: const BorderSide(color: AppColors.border),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _GuestAccountCard extends StatelessWidget {
   const _GuestAccountCard({
     required this.busy,
@@ -476,8 +559,8 @@ class _GuestAccountCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             showGoogleSignIn
-                ? 'Os lançamentos ficam neste celular. Entre com Google quando '
-                    'quiser preparar a nuvem.'
+                ? 'Os lançamentos ficam neste celular. Entre com Google para '
+                    'sincronizar na nuvem e recuperar em outro aparelho.'
                 : 'No navegador o app roda sem conta. Login com Google está '
                     'disponível no app Android.',
             style: const TextStyle(

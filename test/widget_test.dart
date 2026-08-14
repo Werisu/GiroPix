@@ -4,6 +4,7 @@ import 'package:giropix/core/utils/currency_formatter.dart';
 import 'package:giropix/core/utils/date_helpers.dart';
 import 'package:giropix/data/models/corrida.dart';
 import 'package:giropix/data/models/gasto.dart';
+import 'package:giropix/data/services/sync_merger.dart';
 
 void main() {
   test('valorLiquido calcula bruto menos taxa', () {
@@ -117,6 +118,121 @@ void main() {
     expect(faixas.first.inicio, DateTime(2026, 8, 5));
     expect(faixas.last.inicio, DateTime(2026, 8, 5, 21));
     expect(faixas.last.fim, DateTime(2026, 8, 6));
+  });
+
+  test('Corrida.fromJson lê updatedAt quando presente', () {
+    final restored = Corrida.fromJson({
+      'id': 'c3',
+      'dataHora': '2026-08-05T12:00:00.000',
+      'valorBruto': 20,
+      'formaPagamento': 'Pix',
+      'taxaApp': 2,
+      'updatedAt': '2026-08-05T15:00:00.000Z',
+    });
+    expect(restored.updatedAt, DateTime.parse('2026-08-05T15:00:00.000Z'));
+  });
+
+  test('merge prioriza o updatedAt mais recente', () {
+    final local = Corrida(
+      id: 'c1',
+      dataHora: DateTime.utc(2026, 8, 1, 10),
+      valorBruto: 40,
+      formaPagamento: 'Pix',
+      taxaApp: 6,
+      updatedAt: DateTime.utc(2026, 8, 1, 10),
+    );
+    final remoteItem = local.copyWith(
+      valorBruto: 80,
+      updatedAt: DateTime.utc(2026, 8, 2, 10),
+    );
+    final merged = SyncMerger.mergeCorridas(
+      local: [local],
+      remote: [
+        CloudRecord(
+          id: 'c1',
+          deleted: false,
+          updatedAt: remoteItem.syncStamp,
+          item: remoteItem,
+        ),
+      ],
+      pendingDeletes: const [],
+    );
+    expect(merged.single.valorBruto, 80);
+  });
+
+  test('merge aplica tombstone e remove o lançamento local', () {
+    final local = Corrida(
+      id: 'c1',
+      dataHora: DateTime.utc(2026, 8, 1, 10),
+      valorBruto: 40,
+      formaPagamento: 'Pix',
+      taxaApp: 6,
+      updatedAt: DateTime.utc(2026, 8, 1, 10),
+    );
+    final merged = SyncMerger.mergeCorridas(
+      local: [local],
+      remote: [
+        CloudRecord(
+          id: 'c1',
+          deleted: true,
+          updatedAt: DateTime.utc(2026, 8, 1, 12),
+        ),
+      ],
+      pendingDeletes: const [],
+    );
+    expect(merged, isEmpty);
+  });
+
+  test('merge mantém item só local e ignora tombstone mais antigo', () {
+    final local = Gasto(
+      id: 'g1',
+      data: DateTime.utc(2026, 8, 1, 18),
+      combustivel: 30,
+      updatedAt: DateTime.utc(2026, 8, 2, 10),
+    );
+    final merged = SyncMerger.mergeGastos(
+      local: [local],
+      remote: const [],
+      pendingDeletes: [
+        PendingDelete(
+          id: 'g1',
+          type: 'gasto',
+          deletedAt: DateTime.utc(2026, 8, 1, 12),
+        ),
+      ],
+    );
+    expect(merged.single.id, 'g1');
+  });
+
+  test('belongsToUser ignora documento de outra conta', () {
+    expect(SyncMerger.belongsToUser(null, 'uid-a'), isTrue);
+    expect(SyncMerger.belongsToUser('', 'uid-a'), isTrue);
+    expect(SyncMerger.belongsToUser('uid-a', 'uid-a'), isTrue);
+    expect(SyncMerger.belongsToUser('uid-b', 'uid-a'), isFalse);
+  });
+
+  test('merge descarta registro marcado como de outra conta', () {
+    final local = Corrida(
+      id: 'c1',
+      dataHora: DateTime.utc(2026, 8, 1, 10),
+      valorBruto: 40,
+      formaPagamento: 'Pix',
+      taxaApp: 6,
+      updatedAt: DateTime.utc(2026, 8, 1, 10),
+    );
+    final merged = SyncMerger.mergeCorridas(
+      local: [local],
+      remote: [
+        CloudRecord(
+          id: 'c1',
+          deleted: false,
+          foreign: true,
+          updatedAt: DateTime.utc(2026, 8, 1, 12),
+        ),
+      ],
+      pendingDeletes: const [],
+    );
+    expect(merged, isEmpty);
   });
 
   test('Gasto toJson/fromJson roundtrip', () {

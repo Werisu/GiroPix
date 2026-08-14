@@ -19,13 +19,14 @@ class GastoAdapter extends TypeAdapter<Gasto> {
       combustivel: fields[2] as double,
       alimentacao: fields[3] as double,
       outros: fields[4] as double,
+      updatedAt: fields[5] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Gasto obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -35,7 +36,9 @@ class GastoAdapter extends TypeAdapter<Gasto> {
       ..writeByte(3)
       ..write(obj.alimentacao)
       ..writeByte(4)
-      ..write(obj.outros);
+      ..write(obj.outros)
+      ..writeByte(5)
+      ..write(obj.updatedAt);
   }
 
   @override

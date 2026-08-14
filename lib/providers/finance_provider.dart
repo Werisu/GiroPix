@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -10,6 +11,8 @@ import '../data/models/resumo_financeiro.dart';
 import '../data/repositories/corrida_repository.dart';
 import '../data/repositories/gasto_repository.dart';
 import '../data/services/backup_service.dart';
+import '../data/services/firestore_sync_service.dart';
+import '../data/services/sync_merger.dart';
 
 /// Item unificado para o histórico (corrida ou gasto).
 sealed class HistoricoItem {
@@ -37,13 +40,16 @@ class FinanceProvider extends ChangeNotifier {
     CorridaRepository? corridaRepository,
     GastoRepository? gastoRepository,
     BackupService? backupService,
+    FirestoreSyncService? syncService,
   }) : _corridaRepo = corridaRepository ?? CorridaRepository(),
        _gastoRepo = gastoRepository ?? GastoRepository(),
-       _backupService = backupService ?? BackupService();
+       _backupService = backupService ?? BackupService(),
+       _syncService = syncService ?? FirestoreSyncService();
 
   final CorridaRepository _corridaRepo;
   final GastoRepository _gastoRepo;
   final BackupService _backupService;
+  final FirestoreSyncService _syncService;
 
   List<Corrida> _corridas = [];
   List<Gasto> _gastos = [];
@@ -51,6 +57,13 @@ class FinanceProvider extends ChangeNotifier {
   double _taxaPadraoPercent = HiveService.taxaPadraoDefault;
   String _plataformaPadrao = HiveService.plataformaPadraoDefault;
   bool _loading = true;
+  String? _uid;
+  bool _syncing = false;
+  String? _syncError;
+  DateTime? _lastSyncAt;
+  bool _pruneOnNextSync = false;
+  int _authSeq = 0;
+  Future<void> _syncChain = Future.value();
 
   List<Corrida> get corridas => _corridas;
   List<Gasto> get gastos => _gastos;
@@ -58,12 +71,123 @@ class FinanceProvider extends ChangeNotifier {
   double get taxaPadraoPercent => _taxaPadraoPercent;
   String get plataformaPadrao => _plataformaPadrao;
   bool get loading => _loading;
+  bool get cloudSyncAvailable => _syncService.isAvailable;
+  bool get cloudSyncEnabled => _uid != null && _syncService.isAvailable;
+  bool get syncing => _syncing;
+  String? get syncError => _syncError;
+  DateTime? get lastSyncAt => _lastSyncAt;
+
+  void attachAuthUid(String? uid) {
+    if (uid == _uid) return;
+    _uid = uid;
+    _syncError = null;
+    _lastSyncAt = HiveService.getLastSyncAt();
+    if (uid == null) return;
+
+    final seq = ++_authSeq;
+    final owner = HiveService.getDataOwnerUid();
+    final switchedAccount = owner != null && owner != uid;
+    scheduleMicrotask(
+      () => unawaited(
+        _enqueueSync(uid: uid, seq: seq, clearLocalFirst: switchedAccount),
+      ),
+    );
+  }
+
+  Future<void> sincronizar() {
+    final uid = _uid;
+    if (uid == null) return Future.value();
+    return _enqueueSync(uid: uid, seq: _authSeq, clearLocalFirst: false);
+  }
+
+  Future<void> _enqueueSync({
+    required String uid,
+    required int seq,
+    required bool clearLocalFirst,
+  }) {
+    _syncChain = _syncChain.catchError((_) {}).then(
+      (_) => _runSync(uid: uid, seq: seq, clearLocalFirst: clearLocalFirst),
+    );
+    return _syncChain;
+  }
+
+  Future<void> _runSync({
+    required String uid,
+    required int seq,
+    required bool clearLocalFirst,
+  }) async {
+    if (seq != _authSeq || _uid != uid || !_syncService.isAvailable) return;
+
+    _syncing = true;
+    _syncError = null;
+    notifyListeners();
+    try {
+      if (clearLocalFirst) {
+        await HiveService.clearFinanceData();
+        await reload();
+      }
+      await HiveService.setDataOwnerUid(uid);
+      if (seq != _authSeq || _uid != uid) return;
+
+      await _syncService.syncAll(uid, pruneRemote: _pruneOnNextSync);
+      if (seq != _authSeq || _uid != uid) return;
+
+      _pruneOnNextSync = false;
+      await reload();
+      _lastSyncAt = HiveService.getLastSyncAt();
+    } on CloudSyncException catch (e) {
+      if (seq == _authSeq) _syncError = e.message;
+    } catch (_) {
+      if (seq == _authSeq) {
+        _syncError = 'Não foi possível sincronizar. Verifique a internet.';
+      }
+    } finally {
+      if (seq == _authSeq) {
+        _syncing = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  DateTime _stamp() => DateTime.now().toUtc();
+
+  Future<void> _pushCorrida(Corrida corrida) async {
+    final uid = _uid;
+    if (uid == null || !_syncService.isAvailable) return;
+    try {
+      await _syncService.upsertCorrida(uid, corrida);
+    } catch (_) {}
+  }
+
+  Future<void> _pushGasto(Gasto gasto) async {
+    final uid = _uid;
+    if (uid == null || !_syncService.isAvailable) return;
+    try {
+      await _syncService.upsertGasto(uid, gasto);
+    } catch (_) {}
+  }
+
+  Future<void> _pushSettings() async {
+    final uid = _uid;
+    if (uid == null || !_syncService.isAvailable) return;
+    try {
+      await _syncService.upsertSettings(
+        uid,
+        SettingsSnapshot(
+          taxaPadraoPercent: _taxaPadraoPercent,
+          plataformaPadrao: _plataformaPadrao,
+          updatedAt: HiveService.getSettingsUpdatedAt(),
+        ),
+      );
+    } catch (_) {}
+  }
 
   Future<void> init() async {
     _loading = true;
     notifyListeners();
     _taxaPadraoPercent = HiveService.getTaxaPadraoPercent();
     _plataformaPadrao = HiveService.getPlataformaPadrao();
+    _lastSyncAt = HiveService.getLastSyncAt();
     await reload();
     _loading = false;
     notifyListeners();
@@ -86,12 +210,16 @@ class FinanceProvider extends ChangeNotifier {
   Future<void> setTaxaPadraoPercent(double percent) async {
     _taxaPadraoPercent = percent.clamp(0, 100);
     await HiveService.setTaxaPadraoPercent(_taxaPadraoPercent);
+    await HiveService.setSettingsUpdatedAt(_stamp());
+    await _pushSettings();
     notifyListeners();
   }
 
   Future<void> setPlataformaPadrao(String plataforma) async {
     _plataformaPadrao = plataforma;
     await HiveService.setPlataformaPadrao(plataforma);
+    await HiveService.setSettingsUpdatedAt(_stamp());
+    await _pushSettings();
     notifyListeners();
   }
 
@@ -108,8 +236,10 @@ class FinanceProvider extends ChangeNotifier {
       formaPagamento: formaPagamento,
       taxaApp: taxaApp,
       plataforma: plataforma,
+      updatedAt: _stamp(),
     );
     await _corridaRepo.save(corrida);
+    await _pushCorrida(corrida);
     await reload();
   }
 
@@ -124,28 +254,54 @@ class FinanceProvider extends ChangeNotifier {
       combustivel: combustivel,
       alimentacao: alimentacao,
       outros: outros,
+      updatedAt: _stamp(),
     );
     await _gastoRepo.save(gasto);
+    await _pushGasto(gasto);
     await reload();
   }
 
   Future<void> atualizarCorrida(Corrida corrida) async {
-    await _corridaRepo.save(corrida);
+    final stamped = corrida.copyWith(updatedAt: _stamp());
+    await _corridaRepo.save(stamped);
+    await _pushCorrida(stamped);
     await reload();
   }
 
   Future<void> atualizarGasto(Gasto gasto) async {
-    await _gastoRepo.save(gasto);
+    final stamped = gasto.copyWith(updatedAt: _stamp());
+    await _gastoRepo.save(stamped);
+    await _pushGasto(stamped);
     await reload();
   }
 
   Future<void> excluirCorrida(String id) async {
     await _corridaRepo.delete(id);
+    final deletedAt = _stamp();
+    await HiveService.addPendingDelete(
+      PendingDelete(id: id, type: 'corrida', deletedAt: deletedAt),
+    );
+    final uid = _uid;
+    if (uid != null && _syncService.isAvailable) {
+      try {
+        await _syncService.tombstoneCorrida(uid, id, deletedAt);
+      } catch (_) {}
+    }
     await reload();
   }
 
   Future<void> excluirGasto(String id) async {
     await _gastoRepo.delete(id);
+    final deletedAt = _stamp();
+    await HiveService.addPendingDelete(
+      PendingDelete(id: id, type: 'gasto', deletedAt: deletedAt),
+    );
+    final uid = _uid;
+    if (uid != null && _syncService.isAvailable) {
+      try {
+        await _syncService.tombstoneGasto(uid, id, deletedAt);
+      } catch (_) {}
+    }
     await reload();
   }
 
@@ -163,7 +319,14 @@ class FinanceProvider extends ChangeNotifier {
       mode: mode,
       applySettings: applySettings,
     );
+    if (applySettings) {
+      await HiveService.setSettingsUpdatedAt(_stamp());
+    }
+    if (mode == BackupRestoreMode.replace) {
+      _pruneOnNextSync = true;
+    }
     await reload();
+    unawaited(sincronizar());
     return result;
   }
 
