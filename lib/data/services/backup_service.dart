@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import '../local/hive_service.dart';
 import '../models/corrida.dart';
 import '../models/gasto.dart';
+import '../models/passe_livre.dart';
 
 enum BackupRestoreMode {
   /// Apaga dados locais e carrega o backup.
@@ -53,6 +54,11 @@ class BackupService {
       'exportedAt': DateTime.now().toUtc().toIso8601String(),
       'settings': {
         'taxaPadraoPercent': HiveService.getTaxaPadraoPercent(),
+        'precosPasseLivre': {
+          'horas6': HiveService.getPrecosPasseLivre().horas6,
+          'horas12': HiveService.getPrecosPasseLivre().horas12,
+          'horas24': HiveService.getPrecosPasseLivre().horas24,
+        },
       },
       'corridas': corridas,
       'gastos': gastos,
@@ -133,9 +139,23 @@ class BackupService {
     }
 
     double? taxaPadrao;
+    PrecosPasseLivre? precosPasse;
     final settings = data['settings'];
-    if (settings is Map && settings['taxaPadraoPercent'] is num) {
-      taxaPadrao = (settings['taxaPadraoPercent'] as num).toDouble();
+    if (settings is Map) {
+      if (settings['taxaPadraoPercent'] is num) {
+        taxaPadrao = (settings['taxaPadraoPercent'] as num).toDouble();
+      }
+      final rawPrecos = settings['precosPasseLivre'];
+      if (rawPrecos is Map) {
+        precosPasse = PrecosPasseLivre(
+          horas6: (rawPrecos['horas6'] as num?)?.toDouble() ??
+              PrecosPasseLivre.padrao6h,
+          horas12: (rawPrecos['horas12'] as num?)?.toDouble() ??
+              PrecosPasseLivre.padrao12h,
+          horas24: (rawPrecos['horas24'] as num?)?.toDouble() ??
+              PrecosPasseLivre.padrao24h,
+        );
+      }
     }
 
     // Só grava após validação completa.
@@ -153,6 +173,9 @@ class BackupService {
 
     if (applySettings && taxaPadrao != null) {
       await HiveService.setTaxaPadraoPercent(taxaPadrao.clamp(0, 100));
+    }
+    if (applySettings && precosPasse != null) {
+      await HiveService.setPrecosPasseLivre(precosPasse);
     }
 
     return BackupImportResult(

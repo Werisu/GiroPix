@@ -8,7 +8,9 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/currency_formatter.dart';
 import '../../core/widgets/developer_card.dart';
+import '../../data/models/passe_livre.dart';
 import '../../data/services/backup_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/finance_provider.dart';
@@ -250,7 +252,7 @@ class _BackupScreenState extends State<BackupScreen> {
         backgroundColor: AppColors.surface,
         title: const Text('Configurações do backup'),
         content: const Text(
-          'Deseja também aplicar a taxa padrão (%) salva no arquivo de backup?',
+          'Deseja também aplicar a taxa padrão (%) e os preços do passe livre salvos no arquivo de backup?',
         ),
         actions: [
           TextButton(
@@ -292,6 +294,100 @@ class _BackupScreenState extends State<BackupScreen> {
     );
     if (confirmar != true || !mounted) return;
     await context.read<AuthProvider>().signOut();
+  }
+
+  Future<void> _editarPrecosPasse() async {
+    final finance = context.read<FinanceProvider>();
+    final atuais = finance.precosPasseLivre;
+    final horas6 = TextEditingController(text: formatInputBrl(atuais.horas6));
+    final horas12 = TextEditingController(text: formatInputBrl(atuais.horas12));
+    final horas24 = TextEditingController(text: formatInputBrl(atuais.horas24));
+
+    final salvo = await showDialog<PrecosPasseLivre>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: AppColors.surface,
+          title: const Text('Preços do passe livre'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Use os valores da Maxim na sua cidade para comparar com a taxa do dia.',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: horas6,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: '6 horas (R\$)',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: horas12,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: '12 horas (R\$)',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: horas24,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: '24 horas (R\$)',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () {
+                final v6 = parseBrl(horas6.text);
+                final v12 = parseBrl(horas12.text);
+                final v24 = parseBrl(horas24.text);
+                if (v6 == null || v12 == null || v24 == null) return;
+                Navigator.pop(
+                  ctx,
+                  PrecosPasseLivre(horas6: v6, horas12: v12, horas24: v24),
+                );
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    horas6.dispose();
+    horas12.dispose();
+    horas24.dispose();
+
+    if (salvo == null || !mounted) return;
+    await finance.setPrecosPasseLivre(salvo);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Preços do passe livre atualizados.')),
+    );
   }
 
   Future<void> _entrar() async {
@@ -355,6 +451,17 @@ class _BackupScreenState extends State<BackupScreen> {
                 onSync: finance.syncing || _busy
                     ? null
                     : () => finance.sincronizar(),
+              ),
+              const SizedBox(height: 20),
+              _ActionCard(
+                icon: Icons.confirmation_number_outlined,
+                title: 'Passe livre Maxim',
+                subtitle:
+                    '6h ${formatBrl(finance.precosPasseLivre.horas6)} · '
+                    '12h ${formatBrl(finance.precosPasseLivre.horas12)} · '
+                    '24h ${formatBrl(finance.precosPasseLivre.horas24)}',
+                accent: AppColors.neonBlue,
+                onTap: _busy ? null : _editarPrecosPasse,
               ),
               const SizedBox(height: 20),
               const Text(

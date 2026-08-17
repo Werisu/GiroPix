@@ -42,6 +42,9 @@ class Corrida extends HiveObject {
 
   double get valorLiquido => valorBruto - taxaApp;
 
+  /// Maxim atual e corridas antigas lançadas como Uber.
+  bool get isMaxim => plataforma == 'Maxim' || plataforma == 'Uber';
+
   Corrida copyWith({
     String? id,
     DateTime? dataHora,

@@ -2,6 +2,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import '../models/corrida.dart';
 import '../models/gasto.dart';
+import '../models/passe_livre.dart';
 import '../services/sync_merger.dart';
 
 class HiveService {
@@ -16,6 +17,9 @@ class HiveService {
   static const String keySettingsUpdatedAt = 'settings_updated_at';
   static const String keyPendingDeletes = 'pending_deletes';
   static const String keyDataOwnerUid = 'data_owner_uid';
+  static const String keyPasseLivre6h = 'passe_livre_6h';
+  static const String keyPasseLivre12h = 'passe_livre_12h';
+  static const String keyPasseLivre24h = 'passe_livre_24h';
   static const double taxaPadraoDefault = 15.0;
   static const String plataformaPadraoDefault = '99';
 
@@ -58,6 +62,26 @@ class HiveService {
 
   static Future<void> setPlataformaPadrao(String plataforma) async {
     await settings.put(keyPlataformaPadrao, plataforma);
+  }
+
+  static PrecosPasseLivre getPrecosPasseLivre() {
+    return PrecosPasseLivre(
+      horas6: _readPassePreco(keyPasseLivre6h, PrecosPasseLivre.padrao6h),
+      horas12: _readPassePreco(keyPasseLivre12h, PrecosPasseLivre.padrao12h),
+      horas24: _readPassePreco(keyPasseLivre24h, PrecosPasseLivre.padrao24h),
+    );
+  }
+
+  static Future<void> setPrecosPasseLivre(PrecosPasseLivre precos) async {
+    await settings.put(keyPasseLivre6h, precos.horas6);
+    await settings.put(keyPasseLivre12h, precos.horas12);
+    await settings.put(keyPasseLivre24h, precos.horas24);
+  }
+
+  static double _readPassePreco(String key, double fallback) {
+    final value = (settings.get(key) as num?)?.toDouble();
+    if (value == null || value < 0) return fallback;
+    return value;
   }
 
   static bool getGuestMode() => settings.get(keyGuestMode) == true;
@@ -139,5 +163,6 @@ class HiveService {
     await settings.delete(keySettingsUpdatedAt);
     await settings.put(keyTaxaPadraoPercent, taxaPadraoDefault);
     await settings.put(keyPlataformaPadrao, plataformaPadraoDefault);
+    await setPrecosPasseLivre(const PrecosPasseLivre());
   }
 }

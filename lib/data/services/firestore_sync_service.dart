@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../local/hive_service.dart';
 import '../models/corrida.dart';
 import '../models/gasto.dart';
+import '../models/passe_livre.dart';
 import 'sync_merger.dart';
 
 class CloudSyncException implements Exception {
@@ -131,6 +132,7 @@ class FirestoreSyncService {
         taxaPadraoPercent: HiveService.getTaxaPadraoPercent(),
         plataformaPadrao: HiveService.getPlataformaPadrao(),
         updatedAt: HiveService.getSettingsUpdatedAt(),
+        precosPasseLivre: HiveService.getPrecosPasseLivre(),
       ),
       remote: remoteSettings,
     );
@@ -184,6 +186,14 @@ class FirestoreSyncService {
       plataformaPadrao: data['plataformaPadrao'] as String? ??
           HiveService.plataformaPadraoDefault,
       updatedAt: parseFirestoreDate(data['updatedAt']),
+      precosPasseLivre: PrecosPasseLivre(
+        horas6: (data['passeLivre6h'] as num?)?.toDouble() ??
+            HiveService.getPrecosPasseLivre().horas6,
+        horas12: (data['passeLivre12h'] as num?)?.toDouble() ??
+            HiveService.getPrecosPasseLivre().horas12,
+        horas24: (data['passeLivre24h'] as num?)?.toDouble() ??
+            HiveService.getPrecosPasseLivre().horas24,
+      ),
     );
   }
 
@@ -217,6 +227,7 @@ class FirestoreSyncService {
 
     await HiveService.setTaxaPadraoPercent(settings.taxaPadraoPercent);
     await HiveService.setPlataformaPadrao(settings.plataformaPadrao);
+    await HiveService.setPrecosPasseLivre(settings.precosPasseLivre);
     if (settings.updatedAt != null) {
       await HiveService.setSettingsUpdatedAt(settings.updatedAt!);
     }
@@ -372,6 +383,9 @@ class FirestoreSyncService {
   Map<String, dynamic> _settingsToMap(SettingsSnapshot s) => {
         'taxaPadraoPercent': s.taxaPadraoPercent,
         'plataformaPadrao': s.plataformaPadrao,
+        'passeLivre6h': s.precosPasseLivre.horas6,
+        'passeLivre12h': s.precosPasseLivre.horas12,
+        'passeLivre24h': s.precosPasseLivre.horas24,
         'updatedAt': s.syncStamp.toUtc().toIso8601String(),
       };
 }
