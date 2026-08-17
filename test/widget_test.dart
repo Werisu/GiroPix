@@ -4,6 +4,7 @@ import 'package:giropix/core/utils/currency_formatter.dart';
 import 'package:giropix/core/utils/date_helpers.dart';
 import 'package:giropix/data/models/corrida.dart';
 import 'package:giropix/data/models/gasto.dart';
+import 'package:giropix/data/models/passe_livre.dart';
 import 'package:giropix/data/services/sync_merger.dart';
 
 void main() {
@@ -246,5 +247,130 @@ void main() {
     final restored = Gasto.fromJson(original.toJson());
     expect(restored.id, original.id);
     expect(restored.total, 50);
+  });
+
+  test('Corrida.isMaxim inclui Maxim e Uber antigo', () {
+    final maxim = Corrida(
+      dataHora: DateTime(2026, 8, 17, 10),
+      valorBruto: 20,
+      formaPagamento: 'Pix',
+      taxaApp: 3,
+      plataforma: 'Maxim',
+    );
+    final uber = maxim.copyWith(plataforma: 'Uber');
+    final ifood = maxim.copyWith(plataforma: 'iFood');
+    expect(maxim.isMaxim, isTrue);
+    expect(uber.isMaxim, isTrue);
+    expect(ifood.isMaxim, isFalse);
+  });
+
+  test('passe 24h compensaria quando a taxa do dia passa do preço', () {
+    final corridas = [
+      Corrida(
+        dataHora: DateTime(2026, 8, 17, 8),
+        valorBruto: 80,
+        formaPagamento: 'Pix',
+        taxaApp: 12,
+        plataforma: 'Maxim',
+      ),
+      Corrida(
+        dataHora: DateTime(2026, 8, 17, 18),
+        valorBruto: 70,
+        formaPagamento: 'Pix',
+        taxaApp: 10.5,
+        plataforma: 'Maxim',
+      ),
+    ];
+    final analise = analisarPasseLivre(corridas: corridas);
+    expect(analise.totalTaxasMaxim, 22.5);
+    final p24 = analise.comparacoes.singleWhere((c) => c.pacote.horas == 24);
+    expect(p24.cobreTudo, isTrue);
+    expect(p24.compensaria, isTrue);
+    expect(p24.economia, closeTo(2.0, 0.001));
+    expect(analise.melhor?.pacote.horas, 12);
+  });
+
+  test('passe não compensaria se a taxa do dia for menor que o pacote', () {
+    final corridas = [
+      Corrida(
+        dataHora: DateTime(2026, 8, 17, 10),
+        valorBruto: 30,
+        formaPagamento: 'Pix',
+        taxaApp: 4,
+        plataforma: 'Maxim',
+      ),
+    ];
+    final analise = analisarPasseLivre(corridas: corridas);
+    expect(analise.melhor, isNull);
+    for (final c in analise.comparacoes) {
+      expect(c.compensaria, isFalse);
+    }
+  });
+
+  test('janela de 6h pega o trecho com mais taxa, não o dia inteiro', () {
+    final corridas = [
+      Corrida(
+        dataHora: DateTime(2026, 8, 17, 7),
+        valorBruto: 20,
+        formaPagamento: 'Pix',
+        taxaApp: 3,
+        plataforma: 'Maxim',
+      ),
+      Corrida(
+        dataHora: DateTime(2026, 8, 17, 12),
+        valorBruto: 50,
+        formaPagamento: 'Pix',
+        taxaApp: 10,
+        plataforma: 'Maxim',
+      ),
+      Corrida(
+        dataHora: DateTime(2026, 8, 17, 14),
+        valorBruto: 40,
+        formaPagamento: 'Pix',
+        taxaApp: 8,
+        plataforma: 'Maxim',
+      ),
+    ];
+    final analise = analisarPasseLivre(corridas: corridas);
+    final p6 = analise.comparacoes.singleWhere((c) => c.pacote.horas == 6);
+    expect(p6.taxasCobertas, 18);
+    expect(p6.cobreTudo, isFalse);
+    expect(p6.compensaria, isTrue);
+    expect(p6.economia, closeTo(9.5, 0.001));
+  });
+
+  test('análise do período ignora apps que não são Maxim', () {
+    final corridas = [
+      Corrida(
+        dataHora: DateTime(2026, 8, 17, 10),
+        valorBruto: 40,
+        formaPagamento: 'Pix',
+        taxaApp: 6,
+        plataforma: 'Maxim',
+      ),
+      Corrida(
+        dataHora: DateTime(2026, 8, 17, 11),
+        valorBruto: 40,
+        formaPagamento: 'Pix',
+        taxaApp: 8,
+        plataforma: '99',
+      ),
+      Corrida(
+        dataHora: DateTime(2026, 8, 18, 10),
+        valorBruto: 20,
+        formaPagamento: 'Pix',
+        taxaApp: 3,
+        plataforma: 'Maxim',
+      ),
+    ];
+    final resumo = analisarPasseLivrePorDia(
+      corridas: corridas,
+      inicio: DateTime(2026, 8, 17),
+      fim: DateTime(2026, 8, 19),
+    );
+    expect(resumo.totalTaxasMaxim, 9);
+    expect(resumo.diasComMaxim, 2);
+    expect(resumo.diasQueCompensariam, 0);
+    expect(resumo.quantidadeCorridasMaxim, 2);
   });
 }

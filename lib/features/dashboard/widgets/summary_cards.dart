@@ -19,7 +19,8 @@ class SummaryCards extends StatelessWidget {
         _SummaryTile(
           label: 'Total Bruto',
           value: formatBrl(resumo.totalBruto),
-          subtitle: '${resumo.quantidadeCorridas} corrida(s)',
+          subtitle:
+              '${resumo.quantidadeCorridas} corrida(s) · Taxas ${formatBrl(resumo.totalTaxas)}',
           accent: AppColors.neonBlue,
           icon: Icons.trending_up_rounded,
         ),

@@ -1,5 +1,6 @@
 import '../models/corrida.dart';
 import '../models/gasto.dart';
+import '../models/passe_livre.dart';
 
 class CloudRecord<T> {
   const CloudRecord({
@@ -48,11 +49,13 @@ class SettingsSnapshot {
     required this.taxaPadraoPercent,
     required this.plataformaPadrao,
     this.updatedAt,
+    this.precosPasseLivre = const PrecosPasseLivre(),
   });
 
   final double taxaPadraoPercent;
   final String plataformaPadrao;
   final DateTime? updatedAt;
+  final PrecosPasseLivre precosPasseLivre;
 
   DateTime get syncStamp =>
       (updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0)).toUtc();

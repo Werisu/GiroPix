@@ -7,6 +7,7 @@ import '../core/utils/date_helpers.dart';
 import '../data/local/hive_service.dart';
 import '../data/models/corrida.dart';
 import '../data/models/gasto.dart';
+import '../data/models/passe_livre.dart';
 import '../data/models/resumo_financeiro.dart';
 import '../data/repositories/corrida_repository.dart';
 import '../data/repositories/gasto_repository.dart';
@@ -56,6 +57,7 @@ class FinanceProvider extends ChangeNotifier {
   PeriodoFiltro _periodo = PeriodoFiltro.dia;
   double _taxaPadraoPercent = HiveService.taxaPadraoDefault;
   String _plataformaPadrao = HiveService.plataformaPadraoDefault;
+  PrecosPasseLivre _precosPasseLivre = const PrecosPasseLivre();
   bool _loading = true;
   String? _uid;
   bool _syncing = false;
@@ -70,6 +72,7 @@ class FinanceProvider extends ChangeNotifier {
   PeriodoFiltro get periodo => _periodo;
   double get taxaPadraoPercent => _taxaPadraoPercent;
   String get plataformaPadrao => _plataformaPadrao;
+  PrecosPasseLivre get precosPasseLivre => _precosPasseLivre;
   bool get loading => _loading;
   bool get cloudSyncAvailable => _syncService.isAvailable;
   bool get cloudSyncEnabled => _uid != null && _syncService.isAvailable;
@@ -176,6 +179,7 @@ class FinanceProvider extends ChangeNotifier {
         SettingsSnapshot(
           taxaPadraoPercent: _taxaPadraoPercent,
           plataformaPadrao: _plataformaPadrao,
+          precosPasseLivre: _precosPasseLivre,
           updatedAt: HiveService.getSettingsUpdatedAt(),
         ),
       );
@@ -187,6 +191,7 @@ class FinanceProvider extends ChangeNotifier {
     notifyListeners();
     _taxaPadraoPercent = HiveService.getTaxaPadraoPercent();
     _plataformaPadrao = HiveService.getPlataformaPadrao();
+    _precosPasseLivre = HiveService.getPrecosPasseLivre();
     _lastSyncAt = HiveService.getLastSyncAt();
     await reload();
     _loading = false;
@@ -198,6 +203,7 @@ class FinanceProvider extends ChangeNotifier {
     _gastos = await _gastoRepo.getAll();
     _taxaPadraoPercent = HiveService.getTaxaPadraoPercent();
     _plataformaPadrao = HiveService.getPlataformaPadrao();
+    _precosPasseLivre = HiveService.getPrecosPasseLivre();
     notifyListeners();
   }
 
@@ -218,6 +224,18 @@ class FinanceProvider extends ChangeNotifier {
   Future<void> setPlataformaPadrao(String plataforma) async {
     _plataformaPadrao = plataforma;
     await HiveService.setPlataformaPadrao(plataforma);
+    await HiveService.setSettingsUpdatedAt(_stamp());
+    await _pushSettings();
+    notifyListeners();
+  }
+
+  Future<void> setPrecosPasseLivre(PrecosPasseLivre precos) async {
+    _precosPasseLivre = PrecosPasseLivre(
+      horas6: precos.horas6.clamp(0, 9999),
+      horas12: precos.horas12.clamp(0, 9999),
+      horas24: precos.horas24.clamp(0, 9999),
+    );
+    await HiveService.setPrecosPasseLivre(_precosPasseLivre);
     await HiveService.setSettingsUpdatedAt(_stamp());
     await _pushSettings();
     notifyListeners();
@@ -404,6 +422,23 @@ class FinanceProvider extends ChangeNotifier {
         .where((g) => estaNoIntervalo(g.data, inicio, fim))
         .toList()
       ..sort((a, b) => a.data.compareTo(b.data));
+  }
+
+  AnalisePasseLivre analisePasseLivreDoDia(DateTime dia) {
+    return analisarPasseLivre(
+      corridas: corridasDoDia(dia),
+      precos: _precosPasseLivre,
+    );
+  }
+
+  ResumoPasseLivrePeriodo analisePasseLivreDoPeriodo([PeriodoFiltro? periodo]) {
+    final intervalo = intervaloPeriodo(periodo ?? _periodo);
+    return analisarPasseLivrePorDia(
+      corridas: _corridas,
+      inicio: intervalo.inicio,
+      fim: intervalo.fim,
+      precos: _precosPasseLivre,
+    );
   }
 
   /// Ganhos líquidos no período filtrado (índice 0 = mais antigo).

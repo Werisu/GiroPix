@@ -7,8 +7,10 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_helpers.dart';
 import '../../../data/models/corrida.dart';
 import '../../../data/models/gasto.dart';
+import '../../../data/models/passe_livre.dart';
 import '../../../data/models/resumo_financeiro.dart';
 import '../../../providers/finance_provider.dart';
+import 'passe_livre_card.dart';
 
 const _weekdays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 
@@ -213,6 +215,7 @@ class _WorkedDaysCalendarState extends State<WorkedDaysCalendar> {
     final resumo = finance.resumoDoDia(dia);
     final corridas = finance.corridasDoDia(dia);
     final gastos = finance.gastosDoDia(dia);
+    final analisePasse = finance.analisePasseLivreDoDia(dia);
 
     return showModalBottomSheet<void>(
       context: context,
@@ -226,6 +229,7 @@ class _WorkedDaysCalendarState extends State<WorkedDaysCalendar> {
         resumo: resumo,
         corridas: corridas,
         gastos: gastos,
+        analisePasse: analisePasse,
       ),
     );
   }
@@ -293,12 +297,14 @@ class _DaySummarySheet extends StatelessWidget {
     required this.resumo,
     required this.corridas,
     required this.gastos,
+    required this.analisePasse,
   });
 
   final DateTime dia;
   final ResumoFinanceiro resumo;
   final List<Corrida> corridas;
   final List<Gasto> gastos;
+  final AnalisePasseLivre analisePasse;
 
   @override
   Widget build(BuildContext context) {
@@ -382,6 +388,30 @@ class _DaySummarySheet extends StatelessWidget {
                   ),
                 ),
               ],
+              if (resumo.totalTaxas > 0) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'Taxas dos apps: ${formatBrl(resumo.totalTaxas)}',
+                  style: const TextStyle(
+                    color: AppColors.warning,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+              if (analisePasse.temCorridas) ...[
+                const SizedBox(height: 16),
+                const Text(
+                  'Passe livre Maxim',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                PasseLivreComparacoes(analise: analisePasse),
+              ],
               if (corridas.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 const Text(
@@ -413,13 +443,26 @@ class _DaySummarySheet extends StatelessWidget {
                             style: const TextStyle(fontSize: 13),
                           ),
                         ),
-                        Text(
-                          formatBrl(c.valorLiquido),
-                          style: const TextStyle(
-                            color: AppColors.neonGreen,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 13,
-                          ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              formatBrl(c.valorLiquido),
+                              style: const TextStyle(
+                                color: AppColors.neonGreen,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
+                            if (c.taxaApp > 0)
+                              Text(
+                                'taxa ${formatBrl(c.taxaApp)}',
+                                style: const TextStyle(
+                                  color: AppColors.warning,
+                                  fontSize: 11,
+                                ),
+                              ),
+                          ],
                         ),
                       ],
                     ),
