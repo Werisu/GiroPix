@@ -10,10 +10,12 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../core/widgets/developer_card.dart';
+import '../../data/models/meta_sonho.dart';
 import '../../data/models/passe_livre.dart';
 import '../../data/services/backup_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/finance_provider.dart';
+import '../dashboard/widgets/meta_sonho_sheet.dart';
 
 class BackupScreen extends StatefulWidget {
   const BackupScreen({super.key});
@@ -252,7 +254,7 @@ class _BackupScreenState extends State<BackupScreen> {
         backgroundColor: AppColors.surface,
         title: const Text('Configurações do backup'),
         content: const Text(
-          'Deseja também aplicar a taxa padrão (%) e os preços do passe livre salvos no arquivo de backup?',
+          'Deseja também aplicar a taxa padrão (%), os preços do passe livre e a meta de sonho salvos no arquivo de backup?',
         ),
         actions: [
           TextButton(
@@ -462,6 +464,23 @@ class _BackupScreenState extends State<BackupScreen> {
                     '24h ${formatBrl(finance.precosPasseLivre.horas24)}',
                 accent: AppColors.neonBlue,
                 onTap: _busy ? null : _editarPrecosPasse,
+              ),
+              const SizedBox(height: 12),
+              _ActionCard(
+                icon: finance.metaSonho?.tipo.icon ?? Icons.flag_rounded,
+                title: 'Meta do sonho',
+                subtitle: finance.metaSonho == null
+                    ? 'Ex: conquistar uma moto esportiva'
+                    : '${finance.metaSonho!.titulo} · '
+                        '${formatBrl(finance.metaSonho!.valorGuardado)} de '
+                        '${formatBrl(finance.metaSonho!.valorAlvo)}',
+                accent: AppColors.neonGreen,
+                onTap: _busy
+                    ? null
+                    : () => showMetaSonhoEditor(
+                          context,
+                          atual: finance.metaSonho,
+                        ),
               ),
               const SizedBox(height: 20),
               const Text(

@@ -4,6 +4,7 @@ import 'package:giropix/core/utils/currency_formatter.dart';
 import 'package:giropix/core/utils/date_helpers.dart';
 import 'package:giropix/data/models/corrida.dart';
 import 'package:giropix/data/models/gasto.dart';
+import 'package:giropix/data/models/meta_sonho.dart';
 import 'package:giropix/data/models/passe_livre.dart';
 import 'package:giropix/data/services/sync_merger.dart';
 
@@ -372,5 +373,92 @@ void main() {
     expect(resumo.diasComMaxim, 2);
     expect(resumo.diasQueCompensariam, 0);
     expect(resumo.quantidadeCorridasMaxim, 2);
+  });
+
+  test('MetaSonho toJson/fromJson roundtrip', () {
+    final original = MetaSonho(
+      titulo: 'Moto esportiva',
+      valorAlvo: 18000,
+      valorGuardado: 2500,
+      tipo: TipoMeta.moto,
+      criadaEm: DateTime.utc(2026, 8, 20, 12),
+    );
+    final restored = MetaSonho.fromJson(original.toJson());
+    expect(restored.titulo, 'Moto esportiva');
+    expect(restored.valorAlvo, 18000);
+    expect(restored.valorGuardado, 2500);
+    expect(restored.tipo, TipoMeta.moto);
+    expect(restored.criadaEm, DateTime.utc(2026, 8, 20, 12));
+  });
+
+  test('MetaSonho calcula progresso, restante e conquista', () {
+    final meta = MetaSonho(
+      titulo: 'Moto esportiva',
+      valorAlvo: 10000,
+      valorGuardado: 2500,
+      criadaEm: DateTime.utc(2026, 1, 1),
+    );
+    expect(meta.progresso, closeTo(0.25, 0.0001));
+    expect(meta.restante, 7500);
+    expect(meta.conquistada, isFalse);
+    expect(meta.adicionar(8000).conquistada, isTrue);
+  });
+
+  test('ProgressoMeta estima dias pelo lucro médio', () {
+    final meta = MetaSonho(
+      titulo: 'Moto esportiva',
+      valorAlvo: 1000,
+      valorGuardado: 200,
+      criadaEm: DateTime.utc(2026, 1, 1),
+    );
+    final progresso = ProgressoMeta(meta: meta, lucroMedioDiario: 80);
+    expect(progresso.diasEstimados, 10);
+    expect(progresso.previsaoTexto(), contains('10 dias'));
+  });
+
+  test('mergeSettings preserva meta local se a nuvem ainda não tem o campo', () {
+    final localMeta = MetaSonho(
+      titulo: 'Moto esportiva',
+      valorAlvo: 18000,
+      valorGuardado: 500,
+      criadaEm: DateTime.utc(2026, 8, 1),
+    );
+    final local = SettingsSnapshot(
+      taxaPadraoPercent: 15,
+      plataformaPadrao: '99',
+      updatedAt: DateTime.utc(2026, 8, 1),
+      metaSonho: localMeta,
+    );
+    final remote = SettingsSnapshot(
+      taxaPadraoPercent: 20,
+      plataformaPadrao: 'Maxim',
+      updatedAt: DateTime.utc(2026, 8, 10),
+      metaSonhoDefined: false,
+    );
+    final merged = SyncMerger.mergeSettings(local: local, remote: remote);
+    expect(merged.taxaPadraoPercent, 20);
+    expect(merged.plataformaPadrao, 'Maxim');
+    expect(merged.metaSonho?.titulo, 'Moto esportiva');
+  });
+
+  test('mergeSettings aceita remoção explícita da meta na nuvem', () {
+    final local = SettingsSnapshot(
+      taxaPadraoPercent: 15,
+      plataformaPadrao: '99',
+      updatedAt: DateTime.utc(2026, 8, 1),
+      metaSonho: MetaSonho(
+        titulo: 'Moto esportiva',
+        valorAlvo: 18000,
+        criadaEm: DateTime.utc(2026, 8, 1),
+      ),
+    );
+    final remote = SettingsSnapshot(
+      taxaPadraoPercent: 15,
+      plataformaPadrao: '99',
+      updatedAt: DateTime.utc(2026, 8, 10),
+      metaSonho: null,
+    );
+    final merged = SyncMerger.mergeSettings(local: local, remote: remote);
+    expect(merged.metaSonho, isNull);
   });
 }

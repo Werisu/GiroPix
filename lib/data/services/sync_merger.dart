@@ -1,5 +1,6 @@
 import '../models/corrida.dart';
 import '../models/gasto.dart';
+import '../models/meta_sonho.dart';
 import '../models/passe_livre.dart';
 
 class CloudRecord<T> {
@@ -50,12 +51,18 @@ class SettingsSnapshot {
     required this.plataformaPadrao,
     this.updatedAt,
     this.precosPasseLivre = const PrecosPasseLivre(),
+    this.metaSonho,
+    this.metaSonhoDefined = true,
   });
 
   final double taxaPadraoPercent;
   final String plataformaPadrao;
   final DateTime? updatedAt;
   final PrecosPasseLivre precosPasseLivre;
+  final MetaSonho? metaSonho;
+
+  /// False quando a nuvem ainda não conhece o campo (app antigo).
+  final bool metaSonhoDefined;
 
   DateTime get syncStamp =>
       (updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0)).toUtc();
@@ -137,8 +144,15 @@ class SyncMerger {
     required SettingsSnapshot? remote,
   }) {
     if (remote == null) return local;
-    if (remote.syncStamp.isAfter(local.syncStamp)) return remote;
-    return local;
+    if (!remote.syncStamp.isAfter(local.syncStamp)) return local;
+    if (remote.metaSonhoDefined) return remote;
+    return SettingsSnapshot(
+      taxaPadraoPercent: remote.taxaPadraoPercent,
+      plataformaPadrao: remote.plataformaPadrao,
+      updatedAt: remote.updatedAt,
+      precosPasseLivre: remote.precosPasseLivre,
+      metaSonho: local.metaSonho,
+    );
   }
 
   static void _applyRecord<T>({

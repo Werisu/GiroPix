@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../local/hive_service.dart';
 import '../models/corrida.dart';
 import '../models/gasto.dart';
+import '../models/meta_sonho.dart';
 import '../models/passe_livre.dart';
 import 'sync_merger.dart';
 
@@ -133,6 +134,7 @@ class FirestoreSyncService {
         plataformaPadrao: HiveService.getPlataformaPadrao(),
         updatedAt: HiveService.getSettingsUpdatedAt(),
         precosPasseLivre: HiveService.getPrecosPasseLivre(),
+        metaSonho: HiveService.getMetaSonho(),
       ),
       remote: remoteSettings,
     );
@@ -194,6 +196,8 @@ class FirestoreSyncService {
         horas24: (data['passeLivre24h'] as num?)?.toDouble() ??
             HiveService.getPrecosPasseLivre().horas24,
       ),
+      metaSonho: _metaFromMap(data['metaSonho']),
+      metaSonhoDefined: data.containsKey('metaSonho'),
     );
   }
 
@@ -228,6 +232,9 @@ class FirestoreSyncService {
     await HiveService.setTaxaPadraoPercent(settings.taxaPadraoPercent);
     await HiveService.setPlataformaPadrao(settings.plataformaPadrao);
     await HiveService.setPrecosPasseLivre(settings.precosPasseLivre);
+    if (settings.metaSonhoDefined) {
+      await HiveService.setMetaSonho(settings.metaSonho);
+    }
     if (settings.updatedAt != null) {
       await HiveService.setSettingsUpdatedAt(settings.updatedAt!);
     }
@@ -380,12 +387,22 @@ class FirestoreSyncService {
         'ownerUid': uid,
       };
 
+  MetaSonho? _metaFromMap(dynamic raw) {
+    if (raw is! Map) return null;
+    try {
+      return MetaSonho.fromJson(Map<String, dynamic>.from(raw));
+    } catch (_) {
+      return null;
+    }
+  }
+
   Map<String, dynamic> _settingsToMap(SettingsSnapshot s) => {
         'taxaPadraoPercent': s.taxaPadraoPercent,
         'plataformaPadrao': s.plataformaPadrao,
         'passeLivre6h': s.precosPasseLivre.horas6,
         'passeLivre12h': s.precosPasseLivre.horas12,
         'passeLivre24h': s.precosPasseLivre.horas24,
+        'metaSonho': s.metaSonho?.toJson(),
         'updatedAt': s.syncStamp.toUtc().toIso8601String(),
       };
 }

@@ -2,6 +2,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import '../models/corrida.dart';
 import '../models/gasto.dart';
+import '../models/meta_sonho.dart';
 import '../models/passe_livre.dart';
 import '../services/sync_merger.dart';
 
@@ -20,6 +21,7 @@ class HiveService {
   static const String keyPasseLivre6h = 'passe_livre_6h';
   static const String keyPasseLivre12h = 'passe_livre_12h';
   static const String keyPasseLivre24h = 'passe_livre_24h';
+  static const String keyMetaSonho = 'meta_sonho';
   static const double taxaPadraoDefault = 15.0;
   static const String plataformaPadraoDefault = '99';
 
@@ -82,6 +84,24 @@ class HiveService {
     final value = (settings.get(key) as num?)?.toDouble();
     if (value == null || value < 0) return fallback;
     return value;
+  }
+
+  static MetaSonho? getMetaSonho() {
+    final raw = settings.get(keyMetaSonho);
+    if (raw is! Map) return null;
+    try {
+      return MetaSonho.fromJson(Map<String, dynamic>.from(raw));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> setMetaSonho(MetaSonho? meta) async {
+    if (meta == null) {
+      await settings.delete(keyMetaSonho);
+      return;
+    }
+    await settings.put(keyMetaSonho, meta.toJson());
   }
 
   static bool getGuestMode() => settings.get(keyGuestMode) == true;
@@ -164,5 +184,6 @@ class HiveService {
     await settings.put(keyTaxaPadraoPercent, taxaPadraoDefault);
     await settings.put(keyPlataformaPadrao, plataformaPadraoDefault);
     await setPrecosPasseLivre(const PrecosPasseLivre());
+    await setMetaSonho(null);
   }
 }
