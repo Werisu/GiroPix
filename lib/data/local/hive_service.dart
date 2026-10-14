@@ -3,6 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../models/corrida.dart';
 import '../models/gasto.dart';
 import '../models/meta_sonho.dart';
+import '../models/metas_diarias.dart';
 import '../models/passe_livre.dart';
 import '../services/sync_merger.dart';
 
@@ -22,6 +23,7 @@ class HiveService {
   static const String keyPasseLivre12h = 'passe_livre_12h';
   static const String keyPasseLivre24h = 'passe_livre_24h';
   static const String keyMetaSonho = 'meta_sonho';
+  static const String keyMetasDiarias = 'metas_diarias';
   static const double taxaPadraoDefault = 15.0;
   static const String plataformaPadraoDefault = '99';
 
@@ -102,6 +104,20 @@ class HiveService {
       return;
     }
     await settings.put(keyMetaSonho, meta.toJson());
+  }
+
+  static MetasDiarias getMetasDiarias() {
+    final raw = settings.get(keyMetasDiarias);
+    if (raw is! Map) return const MetasDiarias();
+    try {
+      return MetasDiarias.fromJson(Map<String, dynamic>.from(raw));
+    } catch (_) {
+      return const MetasDiarias();
+    }
+  }
+
+  static Future<void> setMetasDiarias(MetasDiarias metas) async {
+    await settings.put(keyMetasDiarias, metas.toJson());
   }
 
   static bool getGuestMode() => settings.get(keyGuestMode) == true;
@@ -185,5 +201,6 @@ class HiveService {
     await settings.put(keyPlataformaPadrao, plataformaPadraoDefault);
     await setPrecosPasseLivre(const PrecosPasseLivre());
     await setMetaSonho(null);
+    await setMetasDiarias(const MetasDiarias());
   }
 }

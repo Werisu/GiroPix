@@ -1,6 +1,7 @@
 import '../models/corrida.dart';
 import '../models/gasto.dart';
 import '../models/meta_sonho.dart';
+import '../models/metas_diarias.dart';
 import '../models/passe_livre.dart';
 
 class CloudRecord<T> {
@@ -53,6 +54,8 @@ class SettingsSnapshot {
     this.precosPasseLivre = const PrecosPasseLivre(),
     this.metaSonho,
     this.metaSonhoDefined = true,
+    this.metasDiarias = const MetasDiarias(),
+    this.metasDiariasDefined = true,
   });
 
   final double taxaPadraoPercent;
@@ -60,9 +63,11 @@ class SettingsSnapshot {
   final DateTime? updatedAt;
   final PrecosPasseLivre precosPasseLivre;
   final MetaSonho? metaSonho;
+  final MetasDiarias metasDiarias;
 
   /// False quando a nuvem ainda não conhece o campo (app antigo).
   final bool metaSonhoDefined;
+  final bool metasDiariasDefined;
 
   DateTime get syncStamp =>
       (updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0)).toUtc();
@@ -145,13 +150,17 @@ class SyncMerger {
   }) {
     if (remote == null) return local;
     if (!remote.syncStamp.isAfter(local.syncStamp)) return local;
-    if (remote.metaSonhoDefined) return remote;
+    if (remote.metaSonhoDefined && remote.metasDiariasDefined) return remote;
     return SettingsSnapshot(
       taxaPadraoPercent: remote.taxaPadraoPercent,
       plataformaPadrao: remote.plataformaPadrao,
       updatedAt: remote.updatedAt,
       precosPasseLivre: remote.precosPasseLivre,
-      metaSonho: local.metaSonho,
+      metaSonho: remote.metaSonhoDefined ? remote.metaSonho : local.metaSonho,
+      metaSonhoDefined: remote.metaSonhoDefined,
+      metasDiarias:
+          remote.metasDiariasDefined ? remote.metasDiarias : local.metasDiarias,
+      metasDiariasDefined: remote.metasDiariasDefined,
     );
   }
 

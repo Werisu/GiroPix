@@ -8,6 +8,7 @@ import '../data/local/hive_service.dart';
 import '../data/models/corrida.dart';
 import '../data/models/gasto.dart';
 import '../data/models/meta_sonho.dart';
+import '../data/models/metas_diarias.dart';
 import '../data/models/passe_livre.dart';
 import '../data/models/resumo_financeiro.dart';
 import '../data/repositories/corrida_repository.dart';
@@ -60,6 +61,7 @@ class FinanceProvider extends ChangeNotifier {
   String _plataformaPadrao = HiveService.plataformaPadraoDefault;
   PrecosPasseLivre _precosPasseLivre = const PrecosPasseLivre();
   MetaSonho? _metaSonho;
+  MetasDiarias _metasDiarias = const MetasDiarias();
   bool _loading = true;
   String? _uid;
   bool _syncing = false;
@@ -76,6 +78,7 @@ class FinanceProvider extends ChangeNotifier {
   String get plataformaPadrao => _plataformaPadrao;
   PrecosPasseLivre get precosPasseLivre => _precosPasseLivre;
   MetaSonho? get metaSonho => _metaSonho;
+  MetasDiarias get metasDiarias => _metasDiarias;
   bool get loading => _loading;
   bool get cloudSyncAvailable => _syncService.isAvailable;
   bool get cloudSyncEnabled => _uid != null && _syncService.isAvailable;
@@ -184,6 +187,7 @@ class FinanceProvider extends ChangeNotifier {
           plataformaPadrao: _plataformaPadrao,
           precosPasseLivre: _precosPasseLivre,
           metaSonho: _metaSonho,
+          metasDiarias: _metasDiarias,
           updatedAt: HiveService.getSettingsUpdatedAt(),
         ),
       );
@@ -197,6 +201,7 @@ class FinanceProvider extends ChangeNotifier {
     _plataformaPadrao = HiveService.getPlataformaPadrao();
     _precosPasseLivre = HiveService.getPrecosPasseLivre();
     _metaSonho = HiveService.getMetaSonho();
+    _metasDiarias = HiveService.getMetasDiarias();
     _lastSyncAt = HiveService.getLastSyncAt();
     await reload();
     _loading = false;
@@ -210,6 +215,7 @@ class FinanceProvider extends ChangeNotifier {
     _plataformaPadrao = HiveService.getPlataformaPadrao();
     _precosPasseLivre = HiveService.getPrecosPasseLivre();
     _metaSonho = HiveService.getMetaSonho();
+    _metasDiarias = HiveService.getMetasDiarias();
     notifyListeners();
   }
 
@@ -276,6 +282,19 @@ class FinanceProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> salvarMetasDiarias(MetasDiarias metas) async {
+    var normalizada = const MetasDiarias();
+    for (final dia in MetasDiarias.semana) {
+      final valor = metas.metaDe(dia);
+      normalizada = normalizada.definir(dia, valor < 0 ? 0 : valor);
+    }
+    _metasDiarias = normalizada;
+    await HiveService.setMetasDiarias(_metasDiarias);
+    await HiveService.setSettingsUpdatedAt(_stamp());
+    await _pushSettings();
+    notifyListeners();
+  }
+
   /// Progresso da meta com previsão pelo lucro médio dos últimos 7 dias.
   ProgressoMeta? progressoMeta([DateTime? ref]) {
     final meta = _metaSonho;
@@ -285,6 +304,15 @@ class FinanceProvider extends ChangeNotifier {
     final inicio = fim.subtract(const Duration(days: 7));
     final lucro = resumoNoIntervalo(inicio, fim).lucroLiquidoReal;
     return ProgressoMeta(meta: meta, lucroMedioDiario: lucro / 7);
+  }
+
+  /// Faturamento bruto do dia comparado com a meta daquele dia da semana.
+  ProgressoMetaDiaria progressoMetaDiaria([DateTime? ref]) {
+    final dia = ref ?? DateTime.now();
+    return ProgressoMetaDiaria(
+      meta: _metasDiarias.metaNaData(dia),
+      realizado: resumoDoDia(dia).totalBruto,
+    );
   }
 
   Future<void> adicionarCorrida({

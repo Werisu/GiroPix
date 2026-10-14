@@ -8,6 +8,7 @@ import '../local/hive_service.dart';
 import '../models/corrida.dart';
 import '../models/gasto.dart';
 import '../models/meta_sonho.dart';
+import '../models/metas_diarias.dart';
 import '../models/passe_livre.dart';
 
 enum BackupRestoreMode {
@@ -61,6 +62,7 @@ class BackupService {
           'horas24': HiveService.getPrecosPasseLivre().horas24,
         },
         'metaSonho': HiveService.getMetaSonho()?.toJson(),
+        'metasDiarias': HiveService.getMetasDiarias().toJson(),
       },
       'corridas': corridas,
       'gastos': gastos,
@@ -144,6 +146,8 @@ class BackupService {
     PrecosPasseLivre? precosPasse;
     var hasMetaField = false;
     MetaSonho? metaSonho;
+    var hasMetasDiariasField = false;
+    var metasDiarias = const MetasDiarias();
     final settings = data['settings'];
     if (settings is Map) {
       if (settings['taxaPadraoPercent'] is num) {
@@ -168,6 +172,19 @@ class BackupService {
             metaSonho = MetaSonho.fromJson(Map<String, dynamic>.from(rawMeta));
           } catch (_) {
             metaSonho = null;
+          }
+        }
+      }
+      if (settings.containsKey('metasDiarias')) {
+        hasMetasDiariasField = true;
+        final rawMetas = settings['metasDiarias'];
+        if (rawMetas is Map) {
+          try {
+            metasDiarias = MetasDiarias.fromJson(
+              Map<String, dynamic>.from(rawMetas),
+            );
+          } catch (_) {
+            metasDiarias = const MetasDiarias();
           }
         }
       }
@@ -197,6 +214,11 @@ class BackupService {
         await HiveService.setMetaSonho(metaSonho);
       } else if (mode == BackupRestoreMode.replace) {
         await HiveService.setMetaSonho(null);
+      }
+      if (hasMetasDiariasField) {
+        await HiveService.setMetasDiarias(metasDiarias);
+      } else if (mode == BackupRestoreMode.replace) {
+        await HiveService.setMetasDiarias(const MetasDiarias());
       }
     }
 

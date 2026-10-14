@@ -1,12 +1,17 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 
 import 'package:giropix/core/utils/currency_formatter.dart';
 import 'package:giropix/core/utils/date_helpers.dart';
 import 'package:giropix/data/models/corrida.dart';
 import 'package:giropix/data/models/gasto.dart';
 import 'package:giropix/data/models/meta_sonho.dart';
+import 'package:giropix/data/models/metas_diarias.dart';
 import 'package:giropix/data/models/passe_livre.dart';
 import 'package:giropix/data/services/sync_merger.dart';
+import 'package:giropix/features/metas/metas_diarias_screen.dart';
+import 'package:giropix/providers/finance_provider.dart';
 
 void main() {
   test('valorLiquido calcula bruto menos taxa', () {
@@ -460,5 +465,138 @@ void main() {
     );
     final merged = SyncMerger.mergeSettings(local: local, remote: remote);
     expect(merged.metaSonho, isNull);
+  });
+
+  test('copiar meta de um dia para outros não altera a origem', () {
+    const base = MetasDiarias();
+    final segunda = base.definir(DateTime.monday, 90);
+    final soQuarta = segunda.copiar(DateTime.monday, [DateTime.wednesday]);
+    expect(soQuarta.metaDe(DateTime.monday), 90);
+    expect(soQuarta.metaDe(DateTime.wednesday), 90);
+    expect(soQuarta.metaDe(DateTime.friday), 0);
+
+    final todos = segunda.copiar(DateTime.monday, MetasDiarias.semana);
+    for (final dia in MetasDiarias.semana) {
+      expect(todos.metaDe(dia), 90);
+    }
+  });
+
+  test('MetasDiarias toJson/fromJson ignora dia sem meta', () {
+    final metas = const MetasDiarias()
+        .definir(DateTime.monday, 90)
+        .definir(DateTime.saturday, 120);
+    final restored = MetasDiarias.fromJson(metas.toJson());
+    expect(restored.metaDe(DateTime.monday), 90);
+    expect(restored.metaDe(DateTime.saturday), 120);
+    expect(restored.metaDe(DateTime.sunday), 0);
+    expect(restored.toJson().containsKey('7'), isFalse);
+  });
+
+  test('ProgressoMetaDiaria calcula falta e percentual', () {
+    const progresso = ProgressoMetaDiaria(meta: 90, realizado: 40);
+    expect(progresso.falta, 50);
+    expect(progresso.progresso, closeTo(40 / 90, 0.0001));
+    expect(progresso.atingida, isFalse);
+    const batida = ProgressoMetaDiaria(meta: 90, realizado: 90);
+    expect(batida.atingida, isTrue);
+    expect(batida.falta, 0);
+  });
+
+  test('mergeSettings preserva metas diárias se a nuvem ainda não tem o campo', () {
+    final localMetas = const MetasDiarias().definir(DateTime.monday, 90);
+    final local = SettingsSnapshot(
+      taxaPadraoPercent: 15,
+      plataformaPadrao: '99',
+      updatedAt: DateTime.utc(2026, 8, 1),
+      metasDiarias: localMetas,
+    );
+    final remote = SettingsSnapshot(
+      taxaPadraoPercent: 12,
+      plataformaPadrao: 'Maxim',
+      updatedAt: DateTime.utc(2026, 8, 10),
+      metasDiariasDefined: false,
+    );
+    final merged = SyncMerger.mergeSettings(local: local, remote: remote);
+    expect(merged.taxaPadraoPercent, 12);
+    expect(merged.metasDiarias.metaDe(DateTime.monday), 90);
+  });
+
+  test('mergeSettings usa metas diárias mais novas da nuvem', () {
+    final local = SettingsSnapshot(
+      taxaPadraoPercent: 15,
+      plataformaPadrao: '99',
+      updatedAt: DateTime.utc(2026, 8, 1),
+      metasDiarias: const MetasDiarias().definir(DateTime.monday, 50),
+    );
+    final remote = SettingsSnapshot(
+      taxaPadraoPercent: 12,
+      plataformaPadrao: 'Maxim',
+      updatedAt: DateTime.utc(2026, 8, 10),
+      metasDiarias: const MetasDiarias().definir(DateTime.wednesday, 90),
+    );
+    final merged = SyncMerger.mergeSettings(local: local, remote: remote);
+    expect(merged.metasDiarias.metaDe(DateTime.monday), 0);
+    expect(merged.metasDiarias.metaDe(DateTime.wednesday), 90);
+  });
+
+  testWidgets('copia a meta de segunda para quarta e para os outros dias', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider(
+        create: (_) => FinanceProvider(),
+        child: const MaterialApp(
+          home: MetasDiariasScreen(),
+        ),
+      ),
+    );
+
+    Future<void> digitar(int dia, String valor) {
+      return tester.enterText(
+        find.descendant(
+          of: find.byKey(ValueKey('meta-dia-$dia')),
+          matching: find.byType(EditableText),
+        ),
+        valor,
+      );
+    }
+
+    String textoDoDia(int dia) {
+      final editable = tester.widget<EditableText>(
+        find.descendant(
+          of: find.byKey(ValueKey('meta-dia-$dia')),
+          matching: find.byType(EditableText),
+        ),
+      );
+      return editable.controller.text;
+    }
+
+    await digitar(DateTime.monday, '90,00');
+    await tester.tap(find.byKey(const ValueKey('copiar-dia-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('destino-dia-3')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('confirmar-copia')));
+    await tester.pumpAndSettle();
+
+    expect(textoDoDia(DateTime.monday), '90,00');
+    expect(textoDoDia(DateTime.wednesday), '90,00');
+    expect(textoDoDia(DateTime.friday), isEmpty);
+
+    await tester.tap(find.byKey(const ValueKey('copiar-dia-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('copiar-todos')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('confirmar-copia')));
+    await tester.pumpAndSettle();
+
+    for (final dia in MetasDiarias.semana) {
+      expect(textoDoDia(dia), '90,00');
+    }
   });
 }

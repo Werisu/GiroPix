@@ -7,6 +7,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/finance_provider.dart';
 import '../backup/backup_screen.dart';
 import 'widgets/earnings_chart.dart';
+import 'widgets/meta_diaria_card.dart';
 import 'widgets/meta_sonho_card.dart';
 import 'widgets/passe_livre_card.dart';
 import 'widgets/period_filter.dart';
@@ -116,6 +117,7 @@ class DashboardScreen extends StatelessWidget {
                       const SizedBox(height: 12),
                       SummaryCards(resumo: resumo),
                       const SizedBox(height: 20),
+                      const MetaDiariaCard(),
                       const MetaSonhoCard(),
                       const PasseLivreCard(),
                       const WorkedDaysCalendar(),
