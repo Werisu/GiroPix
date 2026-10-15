@@ -39,12 +39,12 @@ class PasseLivreCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.neonBlue.withValues(alpha: 0.12),
+                    color: context.accentAlt.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.confirmation_number_outlined,
-                    color: AppColors.neonBlue,
+                    color: context.accentAlt,
                     size: 18,
                   ),
                 ),
@@ -95,7 +95,7 @@ class PasseLivreCard extends StatelessWidget {
                 style: TextStyle(
                   color: resumo.diasQueCompensariam == 0
                       ? AppColors.textSecondary
-                      : AppColors.neonGreen,
+                      : context.accent,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   height: 1.35,
@@ -150,8 +150,8 @@ class PasseLivreComparacoes extends StatelessWidget {
           Text(
             'Melhor escolha: ${melhor.pacote.label} · '
             'economia de ${formatBrl(melhor.economia)}',
-            style: const TextStyle(
-              color: AppColors.neonGreen,
+            style: TextStyle(
+              color: context.accent,
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
@@ -193,7 +193,7 @@ class _PacoteRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = comparacao.compensaria
-        ? AppColors.neonGreen
+        ? context.accent
         : AppColors.textSecondary;
     final diferenca = comparacao.economia.abs();
     final resultado = comparacao.compensaria
@@ -208,12 +208,12 @@ class _PacoteRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: destacado
-            ? AppColors.neonGreen.withValues(alpha: 0.08)
+            ? context.accent.withValues(alpha: 0.08)
             : AppColors.surfaceLight,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: destacado
-              ? AppColors.neonGreen.withValues(alpha: 0.45)
+              ? context.accent.withValues(alpha: 0.45)
               : AppColors.border,
         ),
       ),

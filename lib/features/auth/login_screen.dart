@@ -23,14 +23,14 @@ class LoginScreen extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppColors.neonGreen, AppColors.neonBlue],
+                    gradient: LinearGradient(
+                      colors: [context.accent, context.accentAlt],
                     ),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.two_wheeler_rounded,
-                    color: Color(0xFF001A10),
+                    color: context.onAccent,
                     size: 40,
                   ),
                 ),
@@ -114,12 +114,12 @@ class LoginScreen extends StatelessWidget {
                       ),
                     ),
                     child: auth.busy
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 22,
                             height: 22,
                             child: CircularProgressIndicator(
                               strokeWidth: 2.4,
-                              color: AppColors.neonGreen,
+                              color: context.accent,
                             ),
                           )
                         : const Row(

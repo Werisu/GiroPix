@@ -229,8 +229,8 @@ class _GastoFormState extends State<GastoForm> {
             height: 54,
             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.neonBlue,
-                foregroundColor: const Color(0xFF001820),
+                backgroundColor: context.accent,
+                foregroundColor: context.onAccent,
               ),
               onPressed: _saving ? null : _salvar,
               icon: _saving

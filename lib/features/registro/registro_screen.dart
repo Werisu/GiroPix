@@ -27,11 +27,11 @@ class RegistroScreen extends StatelessWidget {
                   dividerColor: Colors.transparent,
                   indicator: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
-                    gradient: const LinearGradient(
-                      colors: [AppColors.neonGreen, AppColors.neonBlue],
+                    gradient: LinearGradient(
+                      colors: [context.accent, context.accentAlt],
                     ),
                   ),
-                  labelColor: const Color(0xFF001A10),
+                  labelColor: context.onAccent,
                   unselectedLabelColor: AppColors.textSecondary,
                   labelStyle: const TextStyle(
                     fontWeight: FontWeight.w700,

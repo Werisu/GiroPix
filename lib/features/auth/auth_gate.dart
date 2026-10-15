@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../home/home_shell.dart';
 import 'login_screen.dart';
@@ -17,7 +16,7 @@ class AuthGate extends StatelessWidget {
     if (!auth.initialized) {
       return const Scaffold(
         body: Center(
-          child: CircularProgressIndicator(color: AppColors.neonGreen),
+          child: CircularProgressIndicator(),
         ),
       );
     }

@@ -14,6 +14,7 @@ import '../../data/models/passe_livre.dart';
 import '../../data/services/backup_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/finance_provider.dart';
+import '../settings/app_color_card.dart';
 
 class BackupScreen extends StatefulWidget {
   const BackupScreen({super.key});
@@ -134,7 +135,7 @@ class _BackupScreenState extends State<BackupScreen> {
             style: TextButton.styleFrom(
               foregroundColor: mode == BackupRestoreMode.replace
                   ? AppColors.danger
-                  : AppColors.neonGreen,
+                  : ctx.accent,
             ),
             child: Text(
               mode == BackupRestoreMode.replace ? 'Substituir tudo' : 'Mesclar',
@@ -234,7 +235,7 @@ class _BackupScreenState extends State<BackupScreen> {
                   icon: Icons.merge_type_rounded,
                   title: 'Mesclar',
                   subtitle: 'Mantém o que já existe e unifica por ID.',
-                  accent: AppColors.neonBlue,
+                  accent: ctx.accentAlt,
                   onTap: () => Navigator.pop(ctx, BackupRestoreMode.merge),
                 ),
               ],
@@ -441,6 +442,8 @@ class _BackupScreenState extends State<BackupScreen> {
                 ),
               ],
               const SizedBox(height: 20),
+              const AppColorCard(),
+              const SizedBox(height: 20),
               _CloudSyncCard(
                 authenticated: auth.isAuthenticated,
                 available: finance.cloudSyncAvailable,
@@ -460,7 +463,7 @@ class _BackupScreenState extends State<BackupScreen> {
                     '6h ${formatBrl(finance.precosPasseLivre.horas6)} · '
                     '12h ${formatBrl(finance.precosPasseLivre.horas12)} · '
                     '24h ${formatBrl(finance.precosPasseLivre.horas24)}',
-                accent: AppColors.neonBlue,
+                accent: context.accentAlt,
                 onTap: _busy ? null : _editarPrecosPasse,
               ),
               const SizedBox(height: 20),
@@ -486,7 +489,7 @@ class _BackupScreenState extends State<BackupScreen> {
                 icon: Icons.upload_file_rounded,
                 title: 'Exportar backup',
                 subtitle: 'Gera um JSON e abre a tela de compartilhar',
-                accent: AppColors.neonGreen,
+                accent: context.accent,
                 onTap: _busy ? null : _exportar,
               ),
               const SizedBox(height: 12),
@@ -494,7 +497,7 @@ class _BackupScreenState extends State<BackupScreen> {
                 icon: Icons.download_rounded,
                 title: 'Importar backup',
                 subtitle: 'Restaura a partir de um arquivo .json',
-                accent: AppColors.neonBlue,
+                accent: context.accentAlt,
                 onTap: _busy ? null : _importar,
               ),
               const SizedBox(height: 28),
@@ -505,7 +508,7 @@ class _BackupScreenState extends State<BackupScreen> {
             const ModalBarrier(dismissible: false, color: Color(0x66000000)),
           if (_busy)
             const Center(
-              child: CircularProgressIndicator(color: AppColors.neonGreen),
+              child: CircularProgressIndicator(),
             ),
         ],
       ),
@@ -537,8 +540,8 @@ class _CloudSyncCard extends StatelessWidget {
     final statusColor = error != null
         ? AppColors.danger
         : enabled
-            ? AppColors.neonGreen
-            : AppColors.neonBlue;
+            ? context.accent
+            : context.accentAlt;
 
     String subtitle;
     if (!available) {
@@ -583,12 +586,12 @@ class _CloudSyncCard extends StatelessWidget {
                 ),
               ),
               if (syncing && enabled)
-                const SizedBox(
+                SizedBox(
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: AppColors.neonGreen,
+                    color: context.accent,
                   ),
                 ),
             ],
@@ -753,8 +756,8 @@ class _AccountCard extends StatelessWidget {
                 child: photoUrl == null
                     ? Text(
                         name.isNotEmpty ? name[0].toUpperCase() : '?',
-                        style: const TextStyle(
-                          color: AppColors.neonGreen,
+                        style: TextStyle(
+                          color: context.accent,
                           fontWeight: FontWeight.w800,
                           fontSize: 18,
                         ),

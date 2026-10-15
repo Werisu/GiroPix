@@ -126,8 +126,8 @@ class _WorkedDaysCalendarState extends State<WorkedDaysCalendar> {
             padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
             child: Text(
               _tituloMes,
-              style: const TextStyle(
-                color: AppColors.neonBlue,
+              style: TextStyle(
+                color: context.accentAlt,
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
               ),
@@ -183,8 +183,8 @@ class _WorkedDaysCalendarState extends State<WorkedDaysCalendar> {
                 Container(
                   width: 10,
                   height: 10,
-                  decoration: const BoxDecoration(
-                    color: AppColors.neonGreen,
+                  decoration: BoxDecoration(
+                    color: context.accent,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -260,13 +260,13 @@ class _DayCell extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: worked
-                ? AppColors.neonGreen.withValues(alpha: 0.18)
+                ? context.accent.withValues(alpha: 0.18)
                 : Colors.transparent,
             border: isToday
-                ? Border.all(color: AppColors.neonBlue, width: 1.5)
+                ? Border.all(color: context.accentAlt, width: 1.5)
                 : worked
                     ? Border.all(
-                        color: AppColors.neonGreen.withValues(alpha: 0.5),
+                        color: context.accent.withValues(alpha: 0.5),
                       )
                     : null,
           ),
@@ -279,9 +279,9 @@ class _DayCell extends StatelessWidget {
                   ? FontWeight.w800
                   : FontWeight.w500,
               color: worked
-                  ? AppColors.neonGreen
+                  ? context.accent
                   : isToday
-                      ? AppColors.neonBlue
+                      ? context.accentAlt
                       : AppColors.textPrimary,
             ),
           ),
@@ -354,7 +354,7 @@ class _DaySummarySheet extends StatelessWidget {
                     child: _MiniStat(
                       label: 'Corridas',
                       value: '${resumo.quantidadeCorridas}',
-                      color: AppColors.neonBlue,
+                      color: context.accentAlt,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -362,7 +362,7 @@ class _DaySummarySheet extends StatelessWidget {
                     child: _MiniStat(
                       label: 'Líquido',
                       value: formatBrl(resumo.totalLiquidoCorridas),
-                      color: AppColors.neonGreen,
+                      color: context.accent,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -448,8 +448,8 @@ class _DaySummarySheet extends StatelessWidget {
                           children: [
                             Text(
                               formatBrl(c.valorLiquido),
-                              style: const TextStyle(
-                                color: AppColors.neonGreen,
+                              style: TextStyle(
+                                color: context.accent,
                                 fontWeight: FontWeight.w700,
                                 fontSize: 13,
                               ),

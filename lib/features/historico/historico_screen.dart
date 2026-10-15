@@ -243,12 +243,12 @@ class _CorridaTile extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: AppColors.neonGreen.withValues(alpha: 0.12),
+                    color: context.accent.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.two_wheeler_rounded,
-                    color: AppColors.neonGreen,
+                    color: context.accent,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -313,8 +313,8 @@ class _CorridaTile extends StatelessWidget {
                   children: [
                     Text(
                       formatBrl(c.valorLiquido),
-                      style: const TextStyle(
-                        color: AppColors.neonGreen,
+                      style: TextStyle(
+                        color: context.accent,
                         fontWeight: FontWeight.w800,
                         fontSize: 16,
                       ),

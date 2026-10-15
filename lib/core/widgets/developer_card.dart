@@ -48,15 +48,15 @@ class DeveloperCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
               Icon(
                 Icons.code_rounded,
-                color: AppColors.neonGreen,
+                color: context.accent,
                 size: 20,
               ),
-              SizedBox(width: 10),
-              Text(
+              const SizedBox(width: 10),
+              const Text(
                 'Desenvolvedor',
                 style: TextStyle(
                   fontWeight: FontWeight.w700,

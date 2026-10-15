@@ -45,9 +45,9 @@ class DateTimeField extends StatelessWidget {
       child: InputDecorator(
         decoration: InputDecoration(
           labelText: label,
-          prefixIcon: const Icon(
+          prefixIcon: Icon(
             Icons.schedule_rounded,
-            color: AppColors.neonBlue,
+            color: context.accentAlt,
           ),
           suffixIcon: const Icon(
             Icons.edit_calendar_outlined,
