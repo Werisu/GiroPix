@@ -198,10 +198,10 @@ class _CorridaFormState extends State<CorridaForm> {
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
             ],
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w700,
-              color: AppColors.neonGreen,
+              color: context.accent,
             ),
             decoration: const InputDecoration(
               labelText: 'Valor Bruto',
@@ -238,7 +238,7 @@ class _CorridaFormState extends State<CorridaForm> {
               ),
               Switch(
                 value: _usarPercentual,
-                activeThumbColor: AppColors.neonGreen,
+                activeThumbColor: context.accent,
                 onChanged: (v) {
                   setState(() {
                     _usarPercentual = v;
@@ -347,8 +347,8 @@ class _CorridaFormState extends State<CorridaForm> {
                 ),
                 Text(
                   formatBrl(liquido < 0 ? 0 : liquido),
-                  style: const TextStyle(
-                    color: AppColors.neonGreen,
+                  style: TextStyle(
+                    color: context.accent,
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
                   ),

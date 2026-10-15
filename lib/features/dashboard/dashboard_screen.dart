@@ -21,7 +21,7 @@ class DashboardScreen extends StatelessWidget {
       builder: (context, finance, _) {
         if (finance.loading) {
           return const Center(
-            child: CircularProgressIndicator(color: AppColors.neonGreen),
+            child: CircularProgressIndicator(),
           );
         }
 
@@ -42,17 +42,17 @@ class DashboardScreen extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
+                              gradient: LinearGradient(
                                 colors: [
-                                  AppColors.neonGreen,
-                                  AppColors.neonBlue,
+                                  context.accent,
+                                  context.accentAlt,
                                 ],
                               ),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.two_wheeler_rounded,
-                              color: Color(0xFF001A10),
+                              color: context.onAccent,
                               size: 22,
                             ),
                           ),

@@ -191,7 +191,7 @@ class EarningsChart extends StatelessWidget {
                               gradient: LinearGradient(
                                 colors: value <= 0
                                     ? [AppColors.border, AppColors.border]
-                                    : [AppColors.neonBlue, AppColors.neonGreen],
+                                    : [context.accentAlt, context.accent],
                                 begin: Alignment.bottomCenter,
                                 end: Alignment.topCenter,
                               ),
@@ -206,8 +206,8 @@ class EarningsChart extends StatelessWidget {
                             final item = data[group.x];
                             return BarTooltipItem(
                               '${_tooltipTitulo(item.inicio)}\n${formatBrl(item.ganhos)}',
-                              const TextStyle(
-                                color: AppColors.neonGreen,
+                              TextStyle(
+                                color: context.accent,
                                 fontWeight: FontWeight.w700,
                                 fontSize: 13,
                               ),

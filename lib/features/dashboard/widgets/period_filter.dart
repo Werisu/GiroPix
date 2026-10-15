@@ -34,8 +34,8 @@ class PeriodFilter extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
                   gradient: isSelected
-                      ? const LinearGradient(
-                          colors: [AppColors.neonGreen, AppColors.neonBlue],
+                      ? LinearGradient(
+                          colors: [context.accent, context.accentAlt],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         )
@@ -48,7 +48,7 @@ class PeriodFilter extends StatelessWidget {
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: isSelected
-                        ? const Color(0xFF001A10)
+                        ? context.onAccent
                         : AppColors.textSecondary,
                   ),
                 ),

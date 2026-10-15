@@ -1,5 +1,94 @@
 import 'package:flutter/material.dart';
 
+/// Paleta de destaque escolhida pelo usuário. O fundo permanece escuro.
+class AppPalette {
+  const AppPalette({
+    required this.id,
+    required this.label,
+    required this.primary,
+    required this.secondary,
+    required this.onPrimary,
+    required this.onSecondary,
+  });
+
+  final String id;
+  final String label;
+  final Color primary;
+  final Color secondary;
+  final Color onPrimary;
+  final Color onSecondary;
+
+  static const verde = AppPalette(
+    id: 'verde',
+    label: 'Verde',
+    primary: Color(0xFF00FF9C),
+    secondary: Color(0xFF00D4FF),
+    onPrimary: Color(0xFF001A10),
+    onSecondary: Color(0xFF001820),
+  );
+
+  static const azul = AppPalette(
+    id: 'azul',
+    label: 'Azul',
+    primary: Color(0xFF3B82F6),
+    secondary: Color(0xFF22D3EE),
+    onPrimary: Colors.white,
+    onSecondary: Color(0xFF042028),
+  );
+
+  static const violeta = AppPalette(
+    id: 'violeta',
+    label: 'Violeta',
+    primary: Color(0xFFC084FC),
+    secondary: Color(0xFF818CF8),
+    onPrimary: Color(0xFF1A1028),
+    onSecondary: Color(0xFF101428),
+  );
+
+  static const ambar = AppPalette(
+    id: 'ambar',
+    label: 'Âmbar',
+    primary: Color(0xFFFFB020),
+    secondary: Color(0xFFFF7A18),
+    onPrimary: Color(0xFF1A1200),
+    onSecondary: Color(0xFF1A0C00),
+  );
+
+  static const rosa = AppPalette(
+    id: 'rosa',
+    label: 'Rosa',
+    primary: Color(0xFFFF4D8D),
+    secondary: Color(0xFFFF8AC4),
+    onPrimary: Colors.white,
+    onSecondary: Color(0xFF2A1020),
+  );
+
+  static const ciano = AppPalette(
+    id: 'ciano',
+    label: 'Ciano',
+    primary: Color(0xFF00E5FF),
+    secondary: Color(0xFF00B4D8),
+    onPrimary: Color(0xFF001418),
+    onSecondary: Color(0xFF001820),
+  );
+
+  static const presets = [verde, azul, violeta, ambar, rosa, ciano];
+
+  static AppPalette byId(String? id) {
+    for (final palette in presets) {
+      if (palette.id == id) return palette;
+    }
+    return verde;
+  }
+}
+
+extension AppAccent on BuildContext {
+  Color get accent => Theme.of(this).colorScheme.primary;
+  Color get accentAlt => Theme.of(this).colorScheme.secondary;
+  Color get onAccent => Theme.of(this).colorScheme.onPrimary;
+  Color get onAccentAlt => Theme.of(this).colorScheme.onSecondary;
+}
+
 /// Paleta dark com acentos neon (Pix / tech).
 class AppColors {
   static const Color background = Color(0xFF0A0E17);
@@ -20,7 +109,7 @@ class AppColors {
 }
 
 class AppTheme {
-  static ThemeData get dark {
+  static ThemeData forPalette(AppPalette palette) {
     final base = ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
@@ -29,13 +118,13 @@ class AppTheme {
 
     return base.copyWith(
       scaffoldBackgroundColor: AppColors.background,
-      colorScheme: const ColorScheme.dark(
-        primary: AppColors.neonGreen,
-        secondary: AppColors.neonBlue,
+      colorScheme: ColorScheme.dark(
+        primary: palette.primary,
+        secondary: palette.secondary,
         surface: AppColors.surface,
         error: AppColors.danger,
-        onPrimary: Color(0xFF001A10),
-        onSecondary: Color(0xFF001820),
+        onPrimary: palette.onPrimary,
+        onSecondary: palette.onSecondary,
         onSurface: AppColors.textPrimary,
         onError: Colors.white,
       ),
@@ -73,15 +162,15 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.neonGreen, width: 1.5),
+          borderSide: BorderSide(color: palette.primary, width: 1.5),
         ),
         labelStyle: const TextStyle(color: AppColors.textSecondary),
         hintStyle: const TextStyle(color: AppColors.textSecondary),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.neonGreen,
-          foregroundColor: const Color(0xFF001A10),
+          backgroundColor: palette.primary,
+          foregroundColor: palette.onPrimary,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
@@ -93,16 +182,38 @@ class AppTheme {
           ),
         ),
       ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: AppColors.neonGreen,
-        foregroundColor: Color(0xFF001A10),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: palette.primary,
+        foregroundColor: palette.onPrimary,
       ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: AppColors.surface,
-        selectedItemColor: AppColors.neonGreen,
+        selectedItemColor: palette.primary,
         unselectedItemColor: AppColors.textSecondary,
         type: BottomNavigationBarType.fixed,
         elevation: 0,
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: palette.primary,
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return palette.primary;
+          return null;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return palette.primary.withValues(alpha: 0.45);
+          }
+          return null;
+        }),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return palette.primary;
+          return null;
+        }),
+        checkColor: WidgetStateProperty.all(palette.onPrimary),
       ),
       dividerTheme: const DividerThemeData(
         color: AppColors.border,

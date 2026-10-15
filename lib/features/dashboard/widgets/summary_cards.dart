@@ -21,7 +21,7 @@ class SummaryCards extends StatelessWidget {
           value: formatBrl(resumo.totalBruto),
           subtitle:
               '${resumo.quantidadeCorridas} corrida(s) · Taxas ${formatBrl(resumo.totalTaxas)}',
-          accent: AppColors.neonBlue,
+          accent: context.accentAlt,
           icon: Icons.trending_up_rounded,
         ),
         const SizedBox(height: 12),

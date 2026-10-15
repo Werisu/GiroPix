@@ -20,6 +20,7 @@ class HiveService {
   static const String keyPasseLivre6h = 'passe_livre_6h';
   static const String keyPasseLivre12h = 'passe_livre_12h';
   static const String keyPasseLivre24h = 'passe_livre_24h';
+  static const String keyAppPaletteId = 'app_palette_id';
   static const double taxaPadraoDefault = 15.0;
   static const String plataformaPadraoDefault = '99';
 
@@ -82,6 +83,16 @@ class HiveService {
     final value = (settings.get(key) as num?)?.toDouble();
     if (value == null || value < 0) return fallback;
     return value;
+  }
+
+  static String? getAppPaletteId() {
+    final value = settings.get(keyAppPaletteId) as String?;
+    if (value == null || value.isEmpty) return null;
+    return value;
+  }
+
+  static Future<void> setAppPaletteId(String id) async {
+    await settings.put(keyAppPaletteId, id);
   }
 
   static bool getGuestMode() => settings.get(keyGuestMode) == true;

@@ -6,6 +6,7 @@ import 'core/theme/app_theme.dart';
 import 'features/auth/auth_gate.dart';
 import 'providers/auth_provider.dart';
 import 'providers/finance_provider.dart';
+import 'providers/theme_provider.dart';
 
 class GiroPixApp extends StatelessWidget {
   const GiroPixApp({super.key});
@@ -14,6 +15,7 @@ class GiroPixApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProxyProvider<AuthProvider, FinanceProvider>(
           create: (_) => FinanceProvider()..init(),
@@ -25,10 +27,22 @@ class GiroPixApp extends StatelessWidget {
           },
         ),
       ],
-      child: MaterialApp(
+      child: const _AppRoot(),
+    );
+  }
+}
+
+class _AppRoot extends StatelessWidget {
+  const _AppRoot();
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.watch<ThemeProvider>().palette;
+
+    return MaterialApp(
         title: 'GiroPix',
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.dark,
+        theme: AppTheme.forPalette(palette),
         themeMode: ThemeMode.dark,
         locale: const Locale('pt', 'BR'),
         supportedLocales: const [Locale('pt', 'BR')],
@@ -38,7 +52,6 @@ class GiroPixApp extends StatelessWidget {
           GlobalCupertinoLocalizations.delegate,
         ],
         home: const AuthGate(),
-      ),
     );
   }
 }
