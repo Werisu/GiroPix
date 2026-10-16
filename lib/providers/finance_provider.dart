@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 import '../core/utils/date_helpers.dart';
+import '../core/utils/fantasma_dia.dart';
 import '../data/local/hive_service.dart';
 import '../data/models/corrida.dart';
 import '../data/models/gasto.dart';
@@ -111,9 +112,11 @@ class FinanceProvider extends ChangeNotifier {
     required int seq,
     required bool clearLocalFirst,
   }) {
-    _syncChain = _syncChain.catchError((_) {}).then(
-      (_) => _runSync(uid: uid, seq: seq, clearLocalFirst: clearLocalFirst),
-    );
+    _syncChain = _syncChain
+        .catchError((_) {})
+        .then(
+          (_) => _runSync(uid: uid, seq: seq, clearLocalFirst: clearLocalFirst),
+        );
     return _syncChain;
   }
 
@@ -471,9 +474,7 @@ class FinanceProvider extends ChangeNotifier {
   List<Gasto> gastosDoDia(DateTime dia) {
     final inicio = inicioDoDia(dia);
     final fim = inicio.add(const Duration(days: 1));
-    return _gastos
-        .where((g) => estaNoIntervalo(g.data, inicio, fim))
-        .toList()
+    return _gastos.where((g) => estaNoIntervalo(g.data, inicio, fim)).toList()
       ..sort((a, b) => a.data.compareTo(b.data));
   }
 
@@ -491,6 +492,16 @@ class FinanceProvider extends ChangeNotifier {
       inicio: intervalo.inicio,
       fim: intervalo.fim,
       precos: _precosPasseLivre,
+    );
+  }
+
+  /// Melhor dia anterior igual a hoje, no mesmo horário.
+  FantasmaDia? fantasmaDeHoje([DateTime? agora]) {
+    return calcularFantasmaDia(
+      corridas: _corridas.map(
+        (c) => (dataHora: c.dataHora, valorLiquido: c.valorLiquido),
+      ),
+      agora: agora ?? DateTime.now(),
     );
   }
 

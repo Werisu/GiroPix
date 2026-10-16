@@ -21,13 +21,14 @@ class DashboardScreen extends StatelessWidget {
     return Consumer<FinanceProvider>(
       builder: (context, finance, _) {
         if (finance.loading) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
+          return const Center(child: CircularProgressIndicator());
         }
 
         final resumo = finance.resumoDoPeriodo();
         final chartData = finance.ganhosDoPeriodo();
+        final fantasma = finance.periodo == PeriodoFiltro.dia
+            ? finance.fantasmaDeHoje()
+            : null;
 
         return SafeArea(
           child: CustomScrollView(
@@ -44,10 +45,7 @@ class DashboardScreen extends StatelessWidget {
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
-                                colors: [
-                                  context.accent,
-                                  context.accentAlt,
-                                ],
+                                colors: [context.accent, context.accentAlt],
                               ),
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -120,7 +118,11 @@ class DashboardScreen extends StatelessWidget {
                       const PasseLivreCard(),
                       const WorkedDaysCalendar(),
                       const SizedBox(height: 20),
-                      EarningsChart(data: chartData, periodo: finance.periodo),
+                      EarningsChart(
+                        data: chartData,
+                        periodo: finance.periodo,
+                        fantasma: fantasma,
+                      ),
                       const SizedBox(height: 24),
                     ],
                   ),
