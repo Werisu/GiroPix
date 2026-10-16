@@ -49,3 +49,5 @@ flutter:
   assets:
     - assets/icon/app_icon.png
     - assets/sounds/lancamento.wav
+    - assets/sounds/lancamento_pesado.wav
+    - assets/sounds/meta_batida.wav

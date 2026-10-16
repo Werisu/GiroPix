@@ -4,6 +4,7 @@ import 'package:giropix/core/utils/currency_formatter.dart';
 import 'package:giropix/core/utils/date_helpers.dart';
 import 'package:giropix/data/models/corrida.dart';
 import 'package:giropix/data/models/gasto.dart';
+import 'package:giropix/data/models/metas_diarias.dart';
 import 'package:giropix/data/models/passe_livre.dart';
 import 'package:giropix/data/services/sync_merger.dart';
 
@@ -372,5 +373,55 @@ void main() {
     expect(resumo.diasComMaxim, 2);
     expect(resumo.diasQueCompensariam, 0);
     expect(resumo.quantidadeCorridasMaxim, 2);
+  });
+
+  test('meta da semana soma os sete dias e a do mês soma o calendário', () {
+    var iguais = const MetasDiarias();
+    for (final dia in MetasDiarias.semana) {
+      iguais = iguais.definir(dia, 90);
+    }
+
+    expect(iguais.metaDaSemana(DateTime(2026, 10, 16)), 630);
+    expect(iguais.metaDoMes(DateTime(2026, 10, 16)), 31 * 90);
+    expect(iguais.metaDoMes(DateTime(2026, 2, 10)), 28 * 90);
+    expect(iguais.metaDaQuinzena(DateTime(2026, 10, 10)), 15 * 90);
+    expect(iguais.metaDaQuinzena(DateTime(2026, 10, 20)), 16 * 90);
+
+    final parciais = const MetasDiarias()
+        .definir(DateTime.monday, 100)
+        .definir(DateTime.tuesday, 80);
+    expect(parciais.metaDaSemana(DateTime(2026, 10, 14)), 180);
+    expect(parciais.metaDaSemana(DateTime(2026, 1, 1)), 180);
+  });
+
+  test('AlvoMeta calcula falta e percentual', () {
+    const alvo = AlvoMeta(
+      titulo: 'Meta da semana',
+      detalhe: 'Soma de segunda a domingo',
+      meta: 630,
+      realizado: 180,
+    );
+    expect(alvo.falta, 450);
+    expect(alvo.progresso, closeTo(180 / 630, 0.0001));
+    expect(alvo.atingida, isFalse);
+  });
+
+  test('mergeSettings preserva metas diárias se a nuvem ainda não tem o campo', () {
+    final local = SettingsSnapshot(
+      taxaPadraoPercent: 15,
+      plataformaPadrao: '99',
+      updatedAt: DateTime.utc(2026, 8, 1),
+      metasDiarias: const MetasDiarias().definir(DateTime.monday, 90),
+    );
+    final remote = SettingsSnapshot(
+      taxaPadraoPercent: 12,
+      plataformaPadrao: 'Maxim',
+      updatedAt: DateTime.utc(2026, 8, 10),
+      metasDiariasDefined: false,
+    );
+    final merged = SyncMerger.mergeSettings(local: local, remote: remote);
+    expect(merged.taxaPadraoPercent, 12);
+    expect(merged.metasDiarias.metaDe(DateTime.monday), 90);
+    expect(merged.metasDiarias.metaDaSemana(DateTime(2026, 8, 10)), 90);
   });
 }

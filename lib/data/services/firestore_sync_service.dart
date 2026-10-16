@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../local/hive_service.dart';
 import '../models/corrida.dart';
 import '../models/gasto.dart';
+import '../models/metas_diarias.dart';
 import '../models/passe_livre.dart';
 import 'sync_merger.dart';
 
@@ -133,6 +134,7 @@ class FirestoreSyncService {
         plataformaPadrao: HiveService.getPlataformaPadrao(),
         updatedAt: HiveService.getSettingsUpdatedAt(),
         precosPasseLivre: HiveService.getPrecosPasseLivre(),
+        metasDiarias: HiveService.getMetasDiarias(),
       ),
       remote: remoteSettings,
     );
@@ -194,6 +196,8 @@ class FirestoreSyncService {
         horas24: (data['passeLivre24h'] as num?)?.toDouble() ??
             HiveService.getPrecosPasseLivre().horas24,
       ),
+      metasDiarias: _metasFromMap(data['metasDiarias']),
+      metasDiariasDefined: data.containsKey('metasDiarias'),
     );
   }
 
@@ -228,6 +232,9 @@ class FirestoreSyncService {
     await HiveService.setTaxaPadraoPercent(settings.taxaPadraoPercent);
     await HiveService.setPlataformaPadrao(settings.plataformaPadrao);
     await HiveService.setPrecosPasseLivre(settings.precosPasseLivre);
+    if (settings.metasDiariasDefined) {
+      await HiveService.setMetasDiarias(settings.metasDiarias);
+    }
     if (settings.updatedAt != null) {
       await HiveService.setSettingsUpdatedAt(settings.updatedAt!);
     }
@@ -386,8 +393,18 @@ class FirestoreSyncService {
         'passeLivre6h': s.precosPasseLivre.horas6,
         'passeLivre12h': s.precosPasseLivre.horas12,
         'passeLivre24h': s.precosPasseLivre.horas24,
+        'metasDiarias': s.metasDiarias.toJson(),
         'updatedAt': s.syncStamp.toUtc().toIso8601String(),
       };
+
+  MetasDiarias _metasFromMap(dynamic raw) {
+    if (raw is! Map) return const MetasDiarias();
+    try {
+      return MetasDiarias.fromJson(Map<String, dynamic>.from(raw));
+    } catch (_) {
+      return const MetasDiarias();
+    }
+  }
 }
 
 class _BatchOp {
