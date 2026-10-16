@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -5,7 +8,10 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/app_feedback.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/date_helpers.dart';
+import '../../../core/utils/peso_corrida.dart';
 import '../../../core/widgets/datetime_field.dart';
+import '../../../core/widgets/meta_batida_banner.dart';
 import '../../../data/models/corrida.dart';
 import '../../../providers/finance_provider.dart';
 import 'payment_selector.dart';
@@ -20,11 +26,13 @@ class CorridaForm extends StatefulWidget {
   State<CorridaForm> createState() => _CorridaFormState();
 }
 
-class _CorridaFormState extends State<CorridaForm> {
+class _CorridaFormState extends State<CorridaForm>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _valorBrutoCtrl = TextEditingController();
   final _taxaCtrl = TextEditingController();
   final _taxaPercentCtrl = TextEditingController();
+  late final AnimationController _flashValor;
 
   late DateTime _dataHora;
   String _formaPagamento = 'Pix';
@@ -37,6 +45,10 @@ class _CorridaFormState extends State<CorridaForm> {
   @override
   void initState() {
     super.initState();
+    _flashValor = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 420),
+    );
     final existing = widget.corrida;
     _dataHora = existing?.dataHora ?? DateTime.now();
 
@@ -67,6 +79,7 @@ class _CorridaFormState extends State<CorridaForm> {
 
   @override
   void dispose() {
+    _flashValor.dispose();
     _valorBrutoCtrl.removeListener(_recalcularTaxa);
     _valorBrutoCtrl.dispose();
     _taxaCtrl.dispose();
@@ -105,6 +118,13 @@ class _CorridaFormState extends State<CorridaForm> {
     setState(() => _saving = true);
     try {
       final finance = context.read<FinanceProvider>();
+      final antes = finance.alvoMeta(PeriodoFiltro.dia, _dataHora);
+      final pesada = corridaPesada(
+        bruto,
+        finance.corridas
+            .where((c) => c.id != widget.corrida?.id)
+            .map((c) => c.valorBruto),
+      );
       if (!_editing && _usarPercentual) {
         final percent = parseBrl(_taxaPercentCtrl.text);
         if (percent != null) {
@@ -133,9 +153,25 @@ class _CorridaFormState extends State<CorridaForm> {
         await finance.setPlataformaPadrao(_plataforma);
       }
 
-      await AppFeedback.lancamentoSalvo();
+      final cruzouMeta = finance
+          .alvoMeta(PeriodoFiltro.dia, _dataHora)
+          .cruzouAgora(antes);
+      if (cruzouMeta) {
+        unawaited(AppFeedback.metaBatida());
+      } else if (pesada) {
+        unawaited(AppFeedback.lancamentoPesado());
+      } else {
+        unawaited(AppFeedback.lancamentoSalvo());
+      }
 
       if (!mounted) return;
+      if (cruzouMeta) MetaBatidaBanner.show(context);
+      if (pesada) {
+        try {
+          await _flashValor.forward(from: 0);
+        } catch (_) {}
+        if (!mounted) return;
+      }
       if (_editing) {
         final messenger = ScaffoldMessenger.of(context);
         Navigator.of(context).pop();
@@ -331,30 +367,58 @@ class _CorridaFormState extends State<CorridaForm> {
             onChanged: (v) => setState(() => _formaPagamento = v),
           ),
           const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Valor líquido',
-                  style: TextStyle(color: AppColors.textSecondary),
-                ),
-                Text(
-                  formatBrl(liquido < 0 ? 0 : liquido),
-                  style: TextStyle(
-                    color: context.accent,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
+          AnimatedBuilder(
+            animation: _flashValor,
+            builder: (context, _) {
+              final pulso = math.sin(_flashValor.value * math.pi);
+              final destaque = Color.lerp(
+                context.accent,
+                Colors.white,
+                pulso,
+              )!;
+              return Transform.scale(
+                scale: 1 + (0.04 * pulso),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: Color.lerp(
+                        AppColors.border,
+                        context.accent,
+                        pulso,
+                      )!,
+                      width: 1 + pulso,
+                    ),
+                    boxShadow: [
+                      if (pulso > 0.04)
+                        BoxShadow(
+                          color: context.accent.withValues(alpha: 0.45 * pulso),
+                          blurRadius: 18,
+                        ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Valor líquido',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
+                      Text(
+                        formatBrl(liquido < 0 ? 0 : liquido),
+                        style: TextStyle(
+                          color: destaque,
+                          fontSize: 20 + (6 * pulso),
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              );
+            },
           ),
           const SizedBox(height: 24),
           SizedBox(

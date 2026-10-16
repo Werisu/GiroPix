@@ -2,6 +2,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import '../models/corrida.dart';
 import '../models/gasto.dart';
+import '../models/metas_diarias.dart';
 import '../models/passe_livre.dart';
 import '../services/sync_merger.dart';
 
@@ -21,6 +22,7 @@ class HiveService {
   static const String keyPasseLivre12h = 'passe_livre_12h';
   static const String keyPasseLivre24h = 'passe_livre_24h';
   static const String keyAppPaletteId = 'app_palette_id';
+  static const String keyMetasDiarias = 'metas_diarias';
   static const double taxaPadraoDefault = 15.0;
   static const String plataformaPadraoDefault = '99';
 
@@ -93,6 +95,20 @@ class HiveService {
 
   static Future<void> setAppPaletteId(String id) async {
     await settings.put(keyAppPaletteId, id);
+  }
+
+  static MetasDiarias getMetasDiarias() {
+    final raw = settings.get(keyMetasDiarias);
+    if (raw is! Map) return const MetasDiarias();
+    try {
+      return MetasDiarias.fromJson(Map<String, dynamic>.from(raw));
+    } catch (_) {
+      return const MetasDiarias();
+    }
+  }
+
+  static Future<void> setMetasDiarias(MetasDiarias metas) async {
+    await settings.put(keyMetasDiarias, metas.toJson());
   }
 
   static bool getGuestMode() => settings.get(keyGuestMode) == true;
@@ -175,5 +191,6 @@ class HiveService {
     await settings.put(keyTaxaPadraoPercent, taxaPadraoDefault);
     await settings.put(keyPlataformaPadrao, plataformaPadraoDefault);
     await setPrecosPasseLivre(const PrecosPasseLivre());
+    await setMetasDiarias(const MetasDiarias());
   }
 }

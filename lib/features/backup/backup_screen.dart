@@ -10,11 +10,13 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../core/widgets/developer_card.dart';
+import '../../data/models/metas_diarias.dart';
 import '../../data/models/passe_livre.dart';
 import '../../data/services/backup_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/finance_provider.dart';
 import '../settings/app_color_card.dart';
+import '../metas/metas_diarias_screen.dart';
 
 class BackupScreen extends StatefulWidget {
   const BackupScreen({super.key});
@@ -466,6 +468,22 @@ class _BackupScreenState extends State<BackupScreen> {
                 accent: context.accentAlt,
                 onTap: _busy ? null : _editarPrecosPasse,
               ),
+              const SizedBox(height: 12),
+              _ActionCard(
+                icon: Icons.calendar_view_week_rounded,
+                title: 'Metas diárias',
+                subtitle: _resumoMetasDiarias(finance.metasDiarias),
+                accent: context.accent,
+                onTap: _busy
+                    ? null
+                    : () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const MetasDiariasScreen(),
+                          ),
+                        );
+                      },
+              ),
               const SizedBox(height: 20),
               const Text(
                 'Backup em arquivo',
@@ -814,6 +832,15 @@ class _AccountCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String _resumoMetasDiarias(MetasDiarias metas) {
+  if (!metas.temAlguma) {
+    return 'A semana e o mês saem da soma dos dias';
+  }
+  final agora = DateTime.now();
+  return 'Semana ${formatBrl(metas.metaDaSemana(agora))} · '
+      'Mês ${formatBrl(metas.metaDoMes(agora))}';
 }
 
 class _ActionCard extends StatelessWidget {

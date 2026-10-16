@@ -7,6 +7,7 @@ import '../core/utils/date_helpers.dart';
 import '../data/local/hive_service.dart';
 import '../data/models/corrida.dart';
 import '../data/models/gasto.dart';
+import '../data/models/metas_diarias.dart';
 import '../data/models/passe_livre.dart';
 import '../data/models/resumo_financeiro.dart';
 import '../data/repositories/corrida_repository.dart';
@@ -58,6 +59,7 @@ class FinanceProvider extends ChangeNotifier {
   double _taxaPadraoPercent = HiveService.taxaPadraoDefault;
   String _plataformaPadrao = HiveService.plataformaPadraoDefault;
   PrecosPasseLivre _precosPasseLivre = const PrecosPasseLivre();
+  MetasDiarias _metasDiarias = const MetasDiarias();
   bool _loading = true;
   String? _uid;
   bool _syncing = false;
@@ -73,6 +75,7 @@ class FinanceProvider extends ChangeNotifier {
   double get taxaPadraoPercent => _taxaPadraoPercent;
   String get plataformaPadrao => _plataformaPadrao;
   PrecosPasseLivre get precosPasseLivre => _precosPasseLivre;
+  MetasDiarias get metasDiarias => _metasDiarias;
   bool get loading => _loading;
   bool get cloudSyncAvailable => _syncService.isAvailable;
   bool get cloudSyncEnabled => _uid != null && _syncService.isAvailable;
@@ -180,6 +183,7 @@ class FinanceProvider extends ChangeNotifier {
           taxaPadraoPercent: _taxaPadraoPercent,
           plataformaPadrao: _plataformaPadrao,
           precosPasseLivre: _precosPasseLivre,
+          metasDiarias: _metasDiarias,
           updatedAt: HiveService.getSettingsUpdatedAt(),
         ),
       );
@@ -192,6 +196,7 @@ class FinanceProvider extends ChangeNotifier {
     _taxaPadraoPercent = HiveService.getTaxaPadraoPercent();
     _plataformaPadrao = HiveService.getPlataformaPadrao();
     _precosPasseLivre = HiveService.getPrecosPasseLivre();
+    _metasDiarias = HiveService.getMetasDiarias();
     _lastSyncAt = HiveService.getLastSyncAt();
     await reload();
     _loading = false;
@@ -204,6 +209,7 @@ class FinanceProvider extends ChangeNotifier {
     _taxaPadraoPercent = HiveService.getTaxaPadraoPercent();
     _plataformaPadrao = HiveService.getPlataformaPadrao();
     _precosPasseLivre = HiveService.getPrecosPasseLivre();
+    _metasDiarias = HiveService.getMetasDiarias();
     notifyListeners();
   }
 
@@ -239,6 +245,53 @@ class FinanceProvider extends ChangeNotifier {
     await HiveService.setSettingsUpdatedAt(_stamp());
     await _pushSettings();
     notifyListeners();
+  }
+
+  Future<void> salvarMetasDiarias(MetasDiarias metas) async {
+    var normalizada = const MetasDiarias();
+    for (final dia in MetasDiarias.semana) {
+      normalizada = normalizada.definir(dia, metas.metaDe(dia));
+    }
+    _metasDiarias = normalizada;
+    await HiveService.setMetasDiarias(_metasDiarias);
+    await HiveService.setSettingsUpdatedAt(_stamp());
+    await _pushSettings();
+    notifyListeners();
+  }
+
+  /// Meta do filtro atual. Semana, quinzena e mês somam as metas diárias.
+  AlvoMeta alvoMeta([PeriodoFiltro? periodo, DateTime? ref]) {
+    final p = periodo ?? _periodo;
+    final agora = ref ?? DateTime.now();
+    final metas = _metasDiarias;
+    final String titulo;
+    final String detalhe;
+    final double meta;
+    switch (p) {
+      case PeriodoFiltro.dia:
+        titulo = 'Meta do dia';
+        detalhe = MetasDiarias.nome(agora.weekday);
+        meta = metas.metaNaData(agora);
+      case PeriodoFiltro.semana:
+        titulo = 'Meta da semana';
+        detalhe = 'Soma de segunda a domingo';
+        meta = metas.metaDaSemana(agora);
+      case PeriodoFiltro.quinzena:
+        titulo = 'Meta da quinzena';
+        detalhe = 'Soma dos dias desta quinzena';
+        meta = metas.metaDaQuinzena(agora);
+      case PeriodoFiltro.mes:
+        titulo = 'Meta do mês';
+        detalhe = 'Soma da meta de cada dia do mês';
+        meta = metas.metaDoMes(agora);
+    }
+    final intervalo = intervaloPeriodo(p, ref: agora);
+    return AlvoMeta(
+      titulo: titulo,
+      detalhe: detalhe,
+      meta: meta,
+      realizado: resumoNoIntervalo(intervalo.inicio, intervalo.fim).totalBruto,
+    );
   }
 
   Future<void> adicionarCorrida({
