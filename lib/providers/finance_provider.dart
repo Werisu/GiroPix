@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 
 import '../core/utils/date_helpers.dart';
@@ -14,6 +12,7 @@ import '../data/repositories/corrida_repository.dart';
 import '../data/repositories/gasto_repository.dart';
 import '../data/services/backup_service.dart';
 import '../data/services/firestore_sync_service.dart';
+import '../data/services/local_file.dart';
 import '../data/services/sync_merger.dart';
 
 /// Item unificado para o histórico (corrida ou gasto).

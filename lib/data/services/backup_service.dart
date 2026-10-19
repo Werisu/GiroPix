@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
@@ -9,6 +8,7 @@ import '../models/corrida.dart';
 import '../models/gasto.dart';
 import '../models/metas_diarias.dart';
 import '../models/passe_livre.dart';
+import 'local_file.dart';
 
 enum BackupRestoreMode {
   /// Apaga dados locais e carrega o backup.

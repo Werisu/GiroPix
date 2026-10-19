@@ -33,6 +33,9 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# SDK baixado só no build do Vercel
+/flutter/
+
 # Symbolication related
 app.*.symbols
 
